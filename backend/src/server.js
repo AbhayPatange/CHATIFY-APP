@@ -4,6 +4,7 @@ import path from "path";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import { connectDB } from "./lib/db.js";
 
 
 
@@ -14,6 +15,8 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 const __dirname = path.resolve();
+
+app.use(express.json()); // req.body that is used in auth.controller.js in controller file
 
 app.use("/api/auth",authRoutes);
 app.use("/api/message",messageRoutes);
@@ -30,4 +33,7 @@ if (process.env.NODE_ENV === "production") {
 
 app.listen(PORT,()=>{
     console.log(`Server is running on port ${PORT}`);
+    connectDB();
 })
+
+//https://chatify-mern-app-m2ny.onrender.com
