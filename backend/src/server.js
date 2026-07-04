@@ -37,4 +37,4 @@ app.listen(PORT,()=>{
     connectDB();
 })
 
-//https://chatify-mern-app-m2ny.onrender.com
+//https://chatify-app-20hy.onrender.com
