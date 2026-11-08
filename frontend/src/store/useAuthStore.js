@@ -91,7 +91,9 @@ export const useAuthStore = create((set, get) => ({
     // which previously allowed duplicate connections (e.g. React StrictMode double-run)
     if (!get().authUser || get().socket) return;
 
-    const socket = io(SOCKET_URL, { withCredentials: true });
+    const socket = io("https://api.pinglet.site", {
+      transports: ["websocket", "polling"],
+    });
 
     socket.on("getOnlineUsers", (userIds) => set({ onlineUsers: userIds }));
     socket.on("connect_error", (err) => {
