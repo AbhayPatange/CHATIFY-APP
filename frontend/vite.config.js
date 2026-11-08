@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-const BACKEND = process.env.VITE_DEV_BACKEND || "https://chatify-app-1-g6jc.onrender.com/";
+const BACKEND = process.env.VITE_DEV_BACKEND || "https://api.pinglet.site/";
 
 // https://vite.dev/config/
 export default defineConfig({

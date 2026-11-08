@@ -12,7 +12,7 @@ const NODE_ENV = clean(process.env.NODE_ENV) || "development";
 const IS_PROD = NODE_ENV === "production";
 
 // CLIENT_URL may hold several comma-separated origins (no trailing slashes needed).
-const CLIENT_ORIGINS = (clean(process.env.CLIENT_URL) || "http://localhost:5173")
+const CLIENT_ORIGINS = (clean(process.env.CLIENT_URL) || "http://www.pinglet.site")
   .split(",")
   .map((s) => stripTrailingSlash(s.trim()))
   .filter(Boolean);
