@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-pl-bg text-pl-text font-sans antialiased;
+  overscroll-behavior: none;
+}
+
+/* thin, quiet scrollbars like a chat app */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(134, 150, 160, 0.35) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid theme(colors.pl.accent);
+  outline-offset: 2px;
+}
+
+/* chat wallpaper: dark background with a faint repeating doodle */
+.chat-wallpaper {
+  background-color: #0b141a;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160' fill='none' stroke='%23ffffff' stroke-opacity='.045' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 24h22a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H32l-8 7v-7h-4a6 6 0 0 1-6-6V30a6 6 0 0 1 6-6z'/%3E%3Ccircle cx='112' cy='30' r='9'/%3E%3Cpath d='M108 30l3 3 6-6'/%3E%3Cpath d='M30 112l10 10m0-10L30 122'/%3E%3Cpath d='M104 108q8-10 16 0t16 0'/%3E%3Ccircle cx='80' cy='80' r='3'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* message bubbles with a little tail on the first message of a run */
+.bubble {
+  @apply relative rounded-lg shadow-sm;
+  max-width: min(85%, 34rem);
+}
+.bubble-in {
+  @apply bg-pl-header text-pl-text;
+}
+.bubble-out {
+  @apply bg-pl-out text-pl-text;
+}
+.bubble-in.has-tail {
+  border-top-left-radius: 0;
+}
+.bubble-out.has-tail {
+  border-top-right-radius: 0;
+}
+.bubble-in.has-tail::before,
+.bubble-out.has-tail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 8px;
+  height: 13px;
+}
+.bubble-in.has-tail::before {
+  left: -8px;
+  background: theme(colors.pl.header);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+}
+.bubble-out.has-tail::before {
+  right: -8px;
+  background: theme(colors.pl.out);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* ---------- auth screens ---------- */
+@layer components {
+  .input {
+    @apply w-full rounded-lg bg-pl-selected py-3 pl-11 pr-4 text-[15px] text-pl-text placeholder-pl-muted
+      border border-transparent focus:border-pl-accent focus:outline-none;
+  }
+  .auth-input-icon {
+    @apply absolute left-3.5 top-1/2 -translate-y-1/2 text-pl-muted size-5;
+  }
+  .auth-input-label {
+    @apply block text-sm font-medium text-pl-muted mb-1.5;
+  }
+  .auth-btn {
+    @apply w-full rounded-full bg-pl-accent py-3 font-medium text-pl-bg transition-colors
+      hover:bg-[#06cf9c] disabled:opacity-60 disabled:cursor-not-allowed;
+  }
+  .auth-link {
+    @apply text-pl-accent hover:underline text-sm;
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "pinglet-app",
+  "version": "1.0.0",
+  "private": true,
+  "license": "ISC",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "npm install --omit=dev --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend",
+    "test": "npm test --prefix backend",
+    "lint": "npm run lint --prefix frontend"
+  }
+}
