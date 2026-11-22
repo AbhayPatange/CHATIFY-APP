@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { LoaderIcon, LockIcon, MailIcon, UserIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, LoaderIcon, LockIcon, MailIcon, UserIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import AuthLayout from "../components/AuthLayout";
 
 function SignUpPage() {
   const [formData, setFormData] = useState({ fullName: "", email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const signup = useAuthStore((s) => s.signup);
   const isSigningUp = useAuthStore((s) => s.isSigningUp);
 
@@ -79,7 +80,7 @@ function SignUpPage() {
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               required
               minLength={6}
@@ -89,6 +90,9 @@ function SignUpPage() {
               className="input"
               placeholder="At least 6 characters"
             />
+            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 -translate-y-1/2 text-pl-muted hover:text-pl-text">
+              {showPassword ? <EyeOffIcon className="size-5" /> : <EyeIcon className="size-5" />}
+            </button>
           </div>
         </div>
 

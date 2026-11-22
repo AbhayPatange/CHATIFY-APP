@@ -1,14 +1,16 @@
 import { useEffect } from "react";
-import { ArrowLeftIcon, XIcon } from "lucide-react";
+import { ArrowLeftIcon, PhoneIcon, VideoIcon, XIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import Avatar from "./Avatar";
+import { useCallStore } from "../store/useCallStore";
 
 function ChatHeader() {
   const selectedUser = useChatStore((s) => s.selectedUser);
   const setSelectedUser = useChatStore((s) => s.setSelectedUser);
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isOnline = onlineUsers.includes(selectedUser._id);
+  const startCall = useCallStore((state) => state.start);
 
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -35,6 +37,9 @@ function ChatHeader() {
         <h3 className="truncate text-base text-pl-text">{selectedUser.fullName}</h3>
         <p className={`text-xs ${isOnline ? "text-pl-accent" : "text-pl-muted"}`}>{isOnline ? "online" : "offline"}</p>
       </div>
+
+      <button type="button" onClick={() => startCall(selectedUser._id, "audio")} disabled={!isOnline} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text disabled:opacity-40"><PhoneIcon className="size-5" /></button>
+      <button type="button" onClick={() => startCall(selectedUser._id, "video")} disabled={!isOnline} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text disabled:opacity-40"><VideoIcon className="size-5" /></button>
 
       <button
         onClick={() => setSelectedUser(null)}

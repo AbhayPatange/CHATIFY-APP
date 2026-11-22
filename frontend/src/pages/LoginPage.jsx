@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { LoaderIcon, LockIcon, MailIcon } from "lucide-react";
+import { EyeIcon, EyeOffIcon, LoaderIcon, LockIcon, MailIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import AuthLayout from "../components/AuthLayout";
 
 function LoginPage() {
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const login = useAuthStore((s) => s.login);
   const isLoggingIn = useAuthStore((s) => s.isLoggingIn);
 
@@ -58,7 +59,7 @@ function LoginPage() {
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               required
               value={formData.password}
@@ -66,7 +67,11 @@ function LoginPage() {
               className="input"
               placeholder="Your password"
             />
+            <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute right-3 top-1/2 -translate-y-1/2 text-pl-muted hover:text-pl-text">
+              {showPassword ? <EyeOffIcon className="size-5" /> : <EyeIcon className="size-5" />}
+            </button>
           </div>
+          <Link to="/forgot-password" className="auth-link mt-2 inline-block text-sm">Forgot password?</Link>
         </div>
 
         <button className="auth-btn" type="submit" disabled={isLoggingIn}>

@@ -8,6 +8,7 @@ import ChatsList from "../components/ChatsList";
 import ContactList from "../components/ContactList";
 import ChatContainer from "../components/ChatContainer";
 import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
+import CallOverlay from "../components/CallOverlay";
 
 function ChatPage() {
   const activeTab = useChatStore((s) => s.activeTab);
@@ -51,6 +52,7 @@ function ChatPage() {
       <section className={`${selectedUser ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col bg-pl-bg`}>
         {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}
       </section>
+      <CallOverlay />
     </div>
   );
 }

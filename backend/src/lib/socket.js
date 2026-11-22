@@ -60,6 +60,15 @@ export function initSocket(httpServer) {
     broadcastOnlineUsers();
     markPendingAsDelivered(userId);
 
+    // WebRTC media stays peer-to-peer; Socket.IO only relays authenticated
+    // signaling messages and never persists audio/video.
+    for (const event of ["call:offer", "call:answer", "call:ice", "call:reject", "call:end"]) {
+      socket.on(event, ({ to, ...payload } = {}) => {
+        if (typeof to !== "string" || to === userId || !onlineCounts.has(to)) return;
+        io.to(to).emit(event, { from: userId, ...payload });
+      });
+    }
+
     socket.on("disconnect", () => {
       const remaining = (onlineCounts.get(userId) || 1) - 1;
       if (remaining <= 0) onlineCounts.delete(userId);
