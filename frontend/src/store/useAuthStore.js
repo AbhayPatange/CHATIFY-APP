@@ -98,6 +98,15 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  forgotPassword: async (email) => {
+    await axiosInstance.post("/auth/forgot-password", { email });
+  },
+
+  resetPassword: async (token, password) => {
+    await axiosInstance.post("/auth/reset-password", { token, password });
+    get().clearSession();
+  },
+
   connectSocket: () => {
     // guard on the socket object itself: "connected" is false while still connecting,
     // which previously allowed duplicate connections (e.g. React StrictMode double-run)

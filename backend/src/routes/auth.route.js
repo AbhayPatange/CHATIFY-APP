@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout, updateProfile, setupEncryption } from "../controllers/auth.controller.js";
+import { signup, login, logout, updateProfile, setupEncryption, forgotPassword, resetPassword } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
 import { createRateLimiter, requireTrustedOrigin } from "../middleware/rateLimit.middleware.js";
@@ -25,11 +25,14 @@ const profileLimiter = createRateLimiter({
   message: "Too many profile updates. Please try again later.",
 });
 const trustedOrigin = requireTrustedOrigin(ENV.CLIENT_ORIGINS);
+const passwordResetLimiter = createRateLimiter({ windowMs: 60 * 60 * 1000, max: 5, message: "Too many reset requests. Please try again later." });
 
 router.use(arcjetProtection);
 
 router.post("/signup", signupLimiter, signup);
 router.post("/login", loginLimiter, login);
+router.post("/forgot-password", passwordResetLimiter, forgotPassword);
+router.post("/reset-password", trustedOrigin, passwordResetLimiter, resetPassword);
 router.post("/logout", trustedOrigin, logout);
 
 router.put("/update-profile", trustedOrigin, protectRoute, profileLimiter, updateProfile);

@@ -31,6 +31,9 @@ const userSchema = new mongoose.Schema(
     // reaches this database.
     encryptionPublicKey: { type: String, default: "", maxlength: 10_000 },
     encryptionKeyBundle: { type: mongoose.Schema.Types.Mixed, select: false },
+    resetPasswordToken: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+    sessionVersion: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

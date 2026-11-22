@@ -11,10 +11,10 @@ const baseCookieOptions = {
   path: "/",
 };
 
-export const generateToken = (userId, res) => {
+export const generateToken = (userId, res, sessionVersion = 0) => {
   if (!ENV.JWT_SECRET) throw new Error("JWT_SECRET is not configured");
 
-  const token = jwt.sign({ userId }, ENV.JWT_SECRET, { expiresIn: "7d", algorithm: "HS256" });
+  const token = jwt.sign({ userId, sessionVersion }, ENV.JWT_SECRET, { expiresIn: "7d", algorithm: "HS256" });
   res.cookie(COOKIE_NAME, token, { ...baseCookieOptions, maxAge: SEVEN_DAYS_MS });
   return token;
 };

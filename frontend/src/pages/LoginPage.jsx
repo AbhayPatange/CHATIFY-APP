@@ -24,6 +24,7 @@ function LoginPage() {
           <Link to="/signup" className="auth-link">
             Create an account
           </Link>
+          <br /><Link to="/forgot-password" className="auth-link">Forgot password?</Link>
         </p>
       }
     >

@@ -1,10 +1,11 @@
 import bcrypt from "bcryptjs";
-import { sendWelcomeEmail } from "../emails/emailHandlers.js";
+import crypto from "crypto";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "../emails/emailHandlers.js";
 import { clearAuthCookie, generateToken } from "../lib/utils.js";
 import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
 import User from "../models/User.js";
-import { isString, normalizeEmail, validateImageDataUrl, validateSignupInput } from "../lib/validators.js";
+import { EMAIL_RE, isString, normalizeEmail, validateImageDataUrl, validateSignupInput } from "../lib/validators.js";
 
 const BCRYPT_ROUNDS = 12;
 // compared against when the email is unknown so login timing doesn't reveal which emails exist
@@ -42,7 +43,7 @@ export const signup = async (req, res, next) => {
       throw error;
     }
 
-    generateToken(savedUser._id, res);
+    generateToken(savedUser._id, res, savedUser.sessionVersion);
     res.status(201).json(publicUser(savedUser, { includeKeyBundle: true }));
 
     // fire and forget: a slow/failed email provider must never affect signup
@@ -68,8 +69,52 @@ export const login = async (req, res, next) => {
     // never tell the client which one is incorrect: password or email
     if (!user || !passwordOk) return res.status(401).json({ message: "Invalid credentials" });
 
-    generateToken(user._id, res);
+    generateToken(user._id, res, user.sessionVersion);
     res.status(200).json(publicUser(user, { includeKeyBundle: true }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    // Identical response whether the account exists or not prevents account enumeration.
+    const response = { message: "If that email is registered, a reset link has been sent." };
+    if (!email || !EMAIL_RE.test(email)) return res.status(200).json(response);
+    const user = await User.findOne({ email }).select("+resetPasswordToken +resetPasswordExpires");
+    if (!user || !ENV.EMAIL_CONFIGURED) return res.status(200).json(response);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordToken = crypto.createHash("sha256").update(token).digest("hex");
+    user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000);
+    await user.save();
+    const resetUrl = `${ENV.CLIENT_URL}/reset-password?token=${token}`;
+    sendPasswordResetEmail(user.email, resetUrl).catch((error) => console.error("Failed to send reset email:", error.message));
+    res.status(200).json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body ?? {};
+    if (!isString(token) || !/^[a-f0-9]{64}$/i.test(token) || !isString(password) || password.length < 6 || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(400).json({ message: "Invalid or expired reset link." });
+    }
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({ resetPasswordToken: tokenHash, resetPasswordExpires: { $gt: new Date() } }).select("+resetPasswordToken +resetPasswordExpires +encryptionKeyBundle");
+    if (!user) return res.status(400).json({ message: "Invalid or expired reset link." });
+    user.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    user.encryptionPublicKey = "";
+    user.encryptionKeyBundle = undefined;
+    user.sessionVersion = (user.sessionVersion ?? 0) + 1;
+    await user.save();
+    generateToken(user._id, res, user.sessionVersion);
+    res.status(200).json({ message: "Password reset. Sign in to create a new encrypted identity." });
   } catch (error) {
     next(error);
   }

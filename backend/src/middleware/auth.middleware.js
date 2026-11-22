@@ -15,6 +15,10 @@ export const protectRoute = async (req, res, next) => {
       clearAuthCookie(res);
       return res.status(401).json({ message: "Unauthorized - User no longer exists" });
     }
+    if ((decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+      clearAuthCookie(res);
+      return res.status(401).json({ message: "Unauthorized - Session has been revoked" });
+    }
 
     req.user = user;
     next();

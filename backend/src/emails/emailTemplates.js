@@ -49,3 +49,8 @@ export function createWelcomeEmailTemplate(name, clientURL) {
 </body>
 </html>`;
 }
+
+export function createPasswordResetEmailTemplate(resetUrl) {
+  const safeUrl = escapeHtml(resetUrl);
+  return `<p>You requested a Pinglet password reset.</p><p><a href="${safeUrl}">Reset password</a></p><p>This link expires in 15 minutes. Resetting your password creates a new encryption identity, so old encrypted messages cannot be opened afterwards.</p><p>If you did not request this, you can ignore this email.</p>`;
+}

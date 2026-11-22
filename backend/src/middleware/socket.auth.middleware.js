@@ -10,6 +10,9 @@ export const socketAuthMiddleware = async (socket, next) => {
 
     const user = await User.findById(decoded.userId);
     if (!user) return next(new Error("Unauthorized - User not found"));
+    if ((decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+      return next(new Error("Unauthorized - Session revoked"));
+    }
 
     socket.user = user;
     socket.userId = user._id.toString();
