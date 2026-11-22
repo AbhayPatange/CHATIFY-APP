@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ArrowLeftIcon, PhoneIcon, VideoIcon, XIcon } from "lucide-react";
+import toast from "react-hot-toast";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import Avatar from "./Avatar";
@@ -11,6 +12,13 @@ function ChatHeader() {
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isOnline = onlineUsers.includes(selectedUser._id);
   const startCall = useCallStore((state) => state.start);
+  const requestCall = (kind) => {
+    if (!isOnline) {
+      toast.error(`${selectedUser.fullName} is offline. They need to be signed in before you can call.`);
+      return;
+    }
+    startCall(selectedUser._id, kind);
+  };
 
   useEffect(() => {
     const handleEscKey = (event) => {
@@ -38,8 +46,8 @@ function ChatHeader() {
         <p className={`text-xs ${isOnline ? "text-pl-accent" : "text-pl-muted"}`}>{isOnline ? "online" : "offline"}</p>
       </div>
 
-      <button type="button" onClick={() => startCall(selectedUser._id, "audio")} disabled={!isOnline} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text disabled:opacity-40"><PhoneIcon className="size-5" /></button>
-      <button type="button" onClick={() => startCall(selectedUser._id, "video")} disabled={!isOnline} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text disabled:opacity-40"><VideoIcon className="size-5" /></button>
+      <button type="button" onClick={() => requestCall("audio")} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><PhoneIcon className="size-5" /></button>
+      <button type="button" onClick={() => requestCall("video")} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><VideoIcon className="size-5" /></button>
 
       <button
         onClick={() => setSelectedUser(null)}
