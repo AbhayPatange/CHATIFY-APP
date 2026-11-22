@@ -20,7 +20,9 @@ export const securityHeaders = (req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  // Calls are requested only by Pinglet's own HTTPS document. Third-party
+  // origins remain excluded, while the app can access camera/microphone.
+  res.setHeader("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
   if (ENV.IS_PROD) {
     res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
     res.setHeader("Content-Security-Policy", CSP);
