@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon, PhoneIcon, VideoIcon, XIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { useChatStore } from "../store/useChatStore";
@@ -12,11 +12,17 @@ function ChatHeader() {
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isOnline = onlineUsers.includes(selectedUser._id);
   const startCall = useCallStore((state) => state.start);
+  const [pendingCall, setPendingCall] = useState(null);
   const requestCall = (kind) => {
     if (!isOnline) {
       toast.error(`${selectedUser.fullName} is offline. They need to be signed in before you can call.`);
       return;
     }
+    setPendingCall(kind);
+  };
+  const confirmCall = () => {
+    const kind = pendingCall;
+    setPendingCall(null);
     startCall(selectedUser._id, kind);
   };
 
@@ -28,7 +34,7 @@ function ChatHeader() {
     return () => window.removeEventListener("keydown", handleEscKey);
   }, [setSelectedUser]);
 
-  return (
+  return <>
     <header className="flex h-[60px] shrink-0 items-center gap-2 bg-pl-header px-2 md:px-4">
       {/* back arrow on phones, where the chat list is hidden while a chat is open */}
       <button
@@ -58,6 +64,16 @@ function ChatHeader() {
         <XIcon className="size-5" />
       </button>
     </header>
-  );
+    {pendingCall && <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="call-permission-title">
+      <div className="w-full max-w-sm rounded-2xl bg-pl-panel p-5 text-pl-text shadow-2xl">
+        <h2 id="call-permission-title" className="text-lg font-semibold">Allow {pendingCall === "video" ? "camera and microphone" : "microphone"}?</h2>
+        <p className="mt-2 text-sm text-pl-muted">Pinglet will ask your browser for permission so you can {pendingCall === "video" ? "join a video call" : "start a voice call"}.</p>
+        <div className="mt-5 flex justify-end gap-3">
+          <button type="button" onClick={() => setPendingCall(null)} className="rounded-lg px-4 py-2 text-sm text-pl-muted hover:bg-pl-selected hover:text-pl-text">Cancel</button>
+          <button type="button" onClick={confirmCall} className="rounded-lg bg-pl-accent px-4 py-2 text-sm font-medium text-pl-bg hover:opacity-90">Continue</button>
+        </div>
+      </div>
+    </div>}
+  </>;
 }
 export default ChatHeader;
