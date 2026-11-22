@@ -10,7 +10,7 @@ export const protectRoute = async (req, res, next) => {
 
     const decoded = verifyToken(token);
 
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId).select("+encryptionKeyBundle");
     if (!user) {
       clearAuthCookie(res);
       return res.status(401).json({ message: "Unauthorized - User no longer exists" });

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { io } from "socket.io-client";
 import { axiosInstance, getErrorMessage, setUnauthorizedHandler, SOCKET_URL } from "../lib/axios";
 import { useChatStore } from "./useChatStore";
+import { createEncryptionIdentity, unlockEncryptionIdentity } from "../lib/crypto";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -12,12 +13,14 @@ export const useAuthStore = create((set, get) => ({
   isUpdatingProfile: false,
   socket: null,
   onlineUsers: [],
+  encryptionIdentity: null,
 
   checkAuth: async () => {
     try {
-      const res = await axiosInstance.get("/auth/check");
-      set({ authUser: res.data });
-      get().connectSocket();
+      await axiosInstance.get("/auth/check");
+      // Private keys are unlocked only with the password entered at login.
+      // A remembered cookie alone must never silently unlock chat history.
+      set({ authUser: null, encryptionIdentity: null });
     } catch (error) {
       set({ authUser: null });
       if (error.response?.status !== 401) console.error("Error in checkAuth:", error);
@@ -29,8 +32,9 @@ export const useAuthStore = create((set, get) => ({
   signup: async (data) => {
     set({ isSigningUp: true });
     try {
-      const res = await axiosInstance.post("/auth/signup", data);
-      set({ authUser: res.data });
+      const { identity, payload } = await createEncryptionIdentity(data.password);
+      const res = await axiosInstance.post("/auth/signup", { ...data, ...payload });
+      set({ authUser: res.data, encryptionIdentity: identity });
       toast.success("Account created successfully!");
       get().connectSocket();
     } catch (error) {
@@ -43,8 +47,16 @@ export const useAuthStore = create((set, get) => ({
   login: async (data) => {
     set({ isLoggingIn: true });
     try {
-      const res = await axiosInstance.post("/auth/login", data);
-      set({ authUser: res.data });
+      let res = await axiosInstance.post("/auth/login", data);
+      let identity;
+      if (res.data.encryptionKeyBundle) {
+        identity = await unlockEncryptionIdentity(data.password, res.data.encryptionPublicKey, res.data.encryptionKeyBundle);
+      } else {
+        const created = await createEncryptionIdentity(data.password);
+        res = await axiosInstance.put("/auth/encryption-key", created.payload);
+        identity = created.identity;
+      }
+      set({ authUser: res.data, encryptionIdentity: identity });
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error) {
@@ -58,7 +70,7 @@ export const useAuthStore = create((set, get) => ({
   clearSession: () => {
     get().disconnectSocket();
     useChatStore.getState().reset();
-    set({ authUser: null });
+    set({ authUser: null, encryptionIdentity: null });
   },
 
   logout: async () => {

@@ -105,9 +105,9 @@ function MessageInput() {
 
         <button
           type="button"
-          aria-label="Attach image"
-          title="Attach image"
-          onClick={() => fileInputRef.current?.click()}
+          aria-label="Encrypted photos coming soon"
+          title="Encrypted photos coming soon"
+          disabled
           className={`grid size-11 shrink-0 place-items-center rounded-full transition-colors hover:bg-pl-selected ${
             imagePreview ? "text-pl-accent" : "text-pl-muted hover:text-pl-text"
           }`}

@@ -10,7 +10,16 @@ const messageSchema = new mongoose.Schema(
   {
     senderId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    // Legacy plaintext field is retained only to display messages sent before
+    // encrypted chat was enabled. New messages use `encrypted` exclusively.
     text: { type: String, trim: true, maxlength: 2000 },
+    encrypted: {
+      ciphertext: { type: String },
+      iv: { type: String },
+      senderKey: { type: String },
+      receiverKey: { type: String },
+      version: { type: Number },
+    },
     image: { type: String },
     status: {
       type: String,

@@ -1,7 +1,5 @@
-import cloudinary from "../lib/cloudinary.js";
-import { ENV } from "../lib/env.js";
 import { emitToUser, isUserOnline } from "../lib/socket.js";
-import { isObjectId, isString, MAX_TEXT_LENGTH, validateImageDataUrl } from "../lib/validators.js";
+import { isObjectId, isString } from "../lib/validators.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
 import User from "../models/User.js";
 
@@ -12,7 +10,7 @@ export const getAllContacts = async (req, res, next) => {
   try {
     // only expose what the UI needs: never other users' emails
     const users = await User.find({ _id: { $ne: req.user._id } })
-      .select("fullName profilePic")
+      .select("fullName profilePic encryptionPublicKey")
       .sort({ fullName: 1 })
       .limit(500)
       .lean();
@@ -59,44 +57,14 @@ export const sendMessage = async (req, res, next) => {
   try {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
-    const { text, image } = req.body ?? {};
+    const { encrypted } = req.body ?? {};
 
     if (!isObjectId(receiverId)) return res.status(400).json({ message: "Invalid user id." });
-    if (text !== undefined && text !== null && !isString(text)) {
-      return res.status(400).json({ message: "Text must be a string." });
-    }
-
-    const cleanText = isString(text) ? text.trim() : "";
-    if (cleanText.length > MAX_TEXT_LENGTH) {
-      return res.status(400).json({ message: `Message is too long (max ${MAX_TEXT_LENGTH} characters).` });
-    }
-    if (!cleanText && !image) return res.status(400).json({ message: "Text or image is required." });
+    if (!isEncryptedMessage(encrypted)) return res.status(400).json({ message: "An encrypted text message is required." });
     if (senderId.equals(receiverId)) return res.status(400).json({ message: "Cannot send messages to yourself." });
-
-    if (image) {
-      if (!ENV.CLOUDINARY_CONFIGURED) {
-        return res.status(503).json({ message: "Image uploads are not configured on this server." });
-      }
-      const check = validateImageDataUrl(image);
-      if (!check.ok) return res.status(400).json({ message: check.message });
-    }
 
     const receiverExists = await User.exists({ _id: receiverId });
     if (!receiverExists) return res.status(404).json({ message: "Receiver not found." });
-
-    let imageUrl;
-    if (image) {
-      try {
-        const uploadResponse = await cloudinary.uploader.upload(image, {
-          folder: "pinglet/messages",
-          resource_type: "image",
-        });
-        imageUrl = uploadResponse.secure_url;
-      } catch (error) {
-        console.error("Cloudinary upload failed:", error.message);
-        return res.status(502).json({ message: "Image upload failed. Please try again." });
-      }
-    }
 
     // receiver has the app open on some device -> straight to "delivered" (two ticks)
     const delivered = isUserOnline(receiverId);
@@ -104,8 +72,7 @@ export const sendMessage = async (req, res, next) => {
     const newMessage = await Message.create({
       senderId,
       receiverId,
-      text: cleanText || undefined,
-      image: imageUrl,
+      encrypted,
       status: delivered ? MESSAGE_STATUS.DELIVERED : MESSAGE_STATUS.SENT,
       deliveredAt: delivered ? new Date() : undefined,
     });
@@ -117,6 +84,12 @@ export const sendMessage = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+
+function isEncryptedMessage(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1) return false;
+  const fields = ["ciphertext", "iv", "senderKey", "receiverKey"];
+  return fields.every((field) => isString(value[field]) && value[field].length > 8 && value[field].length < 20_000);
+}
 };
 
 /**
@@ -200,7 +173,7 @@ export const getChatPartners = async (req, res, next) => {
     ]);
 
     const users = await User.find({ _id: { $in: partners.map((p) => p._id) } })
-      .select("fullName profilePic")
+      .select("fullName profilePic encryptionPublicKey")
       .lean();
     const byId = new Map(users.map((u) => [u._id.toString(), u]));
 
@@ -216,6 +189,7 @@ export const getChatPartners = async (req, res, next) => {
             _id: m._id,
             senderId: m.senderId,
             text: m.text,
+            encrypted: m.encrypted ? { version: m.encrypted.version } : undefined,
             hasImage: Boolean(m.image),
             status: m.status || MESSAGE_STATUS.SEEN, // pre-tick messages
             createdAt: m.createdAt,

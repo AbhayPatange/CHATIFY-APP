@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Public key is intentionally visible to contacts. The matching private
+    // key is encrypted in the browser with the user's password before it ever
+    // reaches this database.
+    encryptionPublicKey: { type: String, default: "", maxlength: 10_000 },
+    encryptionKeyBundle: { type: mongoose.Schema.Types.Mixed, select: false },
   },
   { timestamps: true }
 );

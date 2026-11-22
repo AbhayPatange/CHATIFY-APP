@@ -1,5 +1,5 @@
 import express from "express";
-import { signup, login, logout, updateProfile } from "../controllers/auth.controller.js";
+import { signup, login, logout, updateProfile, setupEncryption } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
 import { createRateLimiter, requireTrustedOrigin } from "../middleware/rateLimit.middleware.js";
@@ -33,6 +33,7 @@ router.post("/login", loginLimiter, login);
 router.post("/logout", trustedOrigin, logout);
 
 router.put("/update-profile", trustedOrigin, protectRoute, profileLimiter, updateProfile);
+router.put("/encryption-key", trustedOrigin, protectRoute, profileLimiter, setupEncryption);
 
 router.get("/check", protectRoute, (req, res) =>
   res.status(200).json({
@@ -40,6 +41,8 @@ router.get("/check", protectRoute, (req, res) =>
     fullName: req.user.fullName,
     email: req.user.email,
     profilePic: req.user.profilePic,
+    encryptionPublicKey: req.user.encryptionPublicKey || "",
+    encryptionKeyBundle: req.user.encryptionKeyBundle || null,
   })
 );
 

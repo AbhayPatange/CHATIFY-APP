@@ -10,11 +10,13 @@ const BCRYPT_ROUNDS = 12;
 // compared against when the email is unknown so login timing doesn't reveal which emails exist
 const DUMMY_HASH = bcrypt.hashSync("pinglet-dummy-password", BCRYPT_ROUNDS);
 
-const publicUser = (user) => ({
+const publicUser = (user, { includeKeyBundle = false } = {}) => ({
   _id: user._id,
   fullName: user.fullName,
   email: user.email,
   profilePic: user.profilePic,
+  encryptionPublicKey: user.encryptionPublicKey || "",
+  ...(includeKeyBundle ? { encryptionKeyBundle: user.encryptionKeyBundle || null } : {}),
 });
 
 export const signup = async (req, res, next) => {
@@ -26,10 +28,14 @@ export const signup = async (req, res, next) => {
     const email = normalizeEmail(req.body.email);
 
     const hashedPassword = await bcrypt.hash(req.body.password, BCRYPT_ROUNDS);
+    const { encryptionPublicKey, encryptionKeyBundle } = req.body;
+    if (!isEncryptionIdentity(encryptionPublicKey, encryptionKeyBundle)) {
+      return res.status(400).json({ message: "A valid encryption identity is required." });
+    }
 
     let savedUser;
     try {
-      savedUser = await User.create({ fullName, email, password: hashedPassword });
+      savedUser = await User.create({ fullName, email, password: hashedPassword, encryptionPublicKey, encryptionKeyBundle });
     } catch (error) {
       // unique index violation: also covers two simultaneous signups with the same email
       if (error?.code === 11000) return res.status(409).json({ message: "Email already exists" });
@@ -37,7 +43,7 @@ export const signup = async (req, res, next) => {
     }
 
     generateToken(savedUser._id, res);
-    res.status(201).json(publicUser(savedUser));
+    res.status(201).json(publicUser(savedUser, { includeKeyBundle: true }));
 
     // fire and forget: a slow/failed email provider must never affect signup
     sendWelcomeEmail(savedUser.email, savedUser.fullName, ENV.CLIENT_URL).catch((error) =>
@@ -56,18 +62,41 @@ export const login = async (req, res, next) => {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email: normalizeEmail(email) }).select("+password");
+    const user = await User.findOne({ email: normalizeEmail(email) }).select("+password +encryptionKeyBundle");
     const passwordOk = await bcrypt.compare(password, user ? user.password : DUMMY_HASH);
 
     // never tell the client which one is incorrect: password or email
     if (!user || !passwordOk) return res.status(401).json({ message: "Invalid credentials" });
 
     generateToken(user._id, res);
-    res.status(200).json(publicUser(user));
+    res.status(200).json(publicUser(user, { includeKeyBundle: true }));
   } catch (error) {
     next(error);
   }
 };
+
+export const setupEncryption = async (req, res, next) => {
+  try {
+    const { encryptionPublicKey, encryptionKeyBundle } = req.body ?? {};
+    if (!isEncryptionIdentity(encryptionPublicKey, encryptionKeyBundle)) {
+      return res.status(400).json({ message: "Invalid encryption identity." });
+    }
+    req.user.encryptionPublicKey = encryptionPublicKey;
+    req.user.encryptionKeyBundle = encryptionKeyBundle;
+    await req.user.save();
+    res.status(200).json(publicUser(req.user, { includeKeyBundle: true }));
+  } catch (error) {
+    next(error);
+  }
+};
+
+function isEncryptionIdentity(publicKey, bundle) {
+  if (!isString(publicKey) || publicKey.length < 50 || publicKey.length > 10_000) return false;
+  if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) return false;
+  return ["salt", "iv", "ciphertext"].every(
+    (key) => isString(bundle[key]) && bundle[key].length > 10 && bundle[key].length < 20_000
+  );
+}
 
 export const logout = (_req, res) => {
   clearAuthCookie(res);

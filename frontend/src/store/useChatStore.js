@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { axiosInstance, getErrorMessage } from "../lib/axios";
 import { readBool, writeBool } from "../lib/storage";
 import { useAuthStore } from "./useAuthStore";
+import { decryptText, encryptText } from "../lib/crypto";
 
 export const PAGE_SIZE = 50;
 
@@ -36,7 +37,7 @@ const playNotification = () => {
 const toPreview = (m) => ({
   _id: m._id,
   senderId: m.senderId,
-  text: m.text,
+  text: m.text || (m.encrypted ? "Encrypted message" : ""),
   hasImage: Boolean(m.image),
   status: m.status || "sent",
   createdAt: m.createdAt,
@@ -100,9 +101,10 @@ export const useChatStore = create((set, get) => ({
     if (!silent) set({ isMessagesLoading: true });
     try {
       const res = await axiosInstance.get(`/messages/${userId}`, { params: { limit: PAGE_SIZE } });
+      const decoded = await decryptMessages(res.data);
       // the user may have switched conversations while this request was in flight
       if (get().selectedUser?._id !== userId) return;
-      set({ messages: res.data, hasMoreMessages: res.data.length >= PAGE_SIZE });
+      set({ messages: decoded, hasMoreMessages: res.data.length >= PAGE_SIZE });
     } catch (error) {
       if (!silent) toast.error(getErrorMessage(error));
     } finally {
@@ -123,9 +125,10 @@ export const useChatStore = create((set, get) => ({
         params: { limit: PAGE_SIZE, before: oldest.createdAt },
       });
       if (get().selectedUser?._id !== selectedUser._id) return;
+      const decoded = await decryptMessages(res.data);
       const existing = new Set(get().messages.map((m) => m._id));
       set({
-        messages: [...res.data.filter((m) => !existing.has(m._id)), ...get().messages],
+        messages: [...decoded.filter((m) => !existing.has(m._id)), ...get().messages],
         hasMoreMessages: res.data.length >= PAGE_SIZE,
       });
     } catch (error) {
@@ -137,8 +140,16 @@ export const useChatStore = create((set, get) => ({
 
   sendMessage: async (messageData) => {
     const { selectedUser } = get();
-    const { authUser } = useAuthStore.getState();
+    const { authUser, encryptionIdentity } = useAuthStore.getState();
     if (!selectedUser || !authUser) return false;
+    if (messageData.image) {
+      toast.error("Encrypted photo sharing is not available yet.");
+      return false;
+    }
+    if (!selectedUser.encryptionPublicKey || !encryptionIdentity) {
+      toast.error("Encrypted chat is not available for this contact yet.");
+      return false;
+    }
 
     const receiverId = selectedUser._id;
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -158,11 +169,13 @@ export const useChatStore = create((set, get) => ({
     bumpChat(receiverId, optimistic);
 
     try {
-      const res = await axiosInstance.post(`/messages/send/${receiverId}`, messageData);
+      const encrypted = await encryptText(messageData.text, selectedUser.encryptionPublicKey, encryptionIdentity);
+      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted });
       // a "seen" event can beat the HTTP response: keep whichever status is further along
       const early = earlyStatus.get(res.data._id);
       earlyStatus.delete(res.data._id);
-      const saved = early && rank(early) > rank(res.data.status) ? { ...res.data, status: early } : res.data;
+      const savedMessage = { ...res.data, text: messageData.text };
+      const saved = early && rank(early) > rank(res.data.status) ? { ...savedMessage, status: early } : savedMessage;
 
       // functional updates + id matching: never overwrite messages that arrived in the meantime
       set((s) => ({ messages: s.messages.map((m) => (m._id === tempId ? saved : m)) }));
@@ -298,7 +311,13 @@ function handleChatRead({ partnerId }) {
   });
 }
 
-function handleNewMessage(message) {
+async function handleNewMessage(message) {
+  try {
+    message = (await decryptMessages([message]))[0];
+  } catch {
+    toast.error("Could not decrypt an incoming message.");
+    return;
+  }
   const state = useChatStore.getState();
   const fromOpenChat = state.selectedUser?._id === message.senderId;
 
@@ -318,6 +337,21 @@ function handleNewMessage(message) {
   if (!bumpChat(message.senderId, message)) state.getMyChatPartners({ silent: true });
 
   if (state.isSoundEnabled) playNotification();
+}
+
+async function decryptMessages(messages) {
+  const { authUser, encryptionIdentity } = useAuthStore.getState();
+  return Promise.all(
+    messages.map(async (message) => {
+      if (!message.encrypted) return message;
+      if (!authUser || !encryptionIdentity) return { ...message, text: "Encrypted message" };
+      try {
+        return { ...message, text: await decryptText(message, authUser._id, encryptionIdentity) };
+      } catch {
+        return { ...message, text: "Unable to decrypt message", decryptFailed: true };
+      }
+    })
+  );
 }
 
 // messages sent while we were offline are fetched again after reconnecting
