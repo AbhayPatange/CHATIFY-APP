@@ -1,10 +1,11 @@
 import axios from "axios";
 
 export const API_URL = import.meta.env.VITE_API_URL || "/api";
-// When HTTP is configured against a separate API origin, use that origin for
-// Socket.IO too unless an explicit socket endpoint is supplied.
-export const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL || (API_URL.startsWith("http") ? new URL(API_URL).origin : "/");
+// Socket.IO connects at the server origin; `/api` is an HTTP route, not a
+// Socket.IO namespace. Normalising also protects against a common deployment
+// mistake: setting VITE_SOCKET_URL to the same value as VITE_API_URL.
+const socketEndpoint = import.meta.env.VITE_SOCKET_URL || API_URL;
+export const SOCKET_URL = socketEndpoint.startsWith("http") ? new URL(socketEndpoint).origin : "/";
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,
