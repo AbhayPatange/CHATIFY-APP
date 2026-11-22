@@ -1,10 +1,19 @@
 import { create } from "zustand";
 import { useAuthStore } from "./useAuthStore";
 
-const ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
+if (import.meta.env.VITE_TURN_URL) {
+  ICE_SERVERS.push({
+    urls: import.meta.env.VITE_TURN_URL,
+    username: import.meta.env.VITE_TURN_USERNAME,
+    credential: import.meta.env.VITE_TURN_CREDENTIAL,
+  });
+}
+const ICE = { iceServers: ICE_SERVERS };
 let peer = null;
 let localStream = null;
 let pendingOffer = null;
+let pendingCandidates = [];
 
 export const useCallStore = create((set, get) => ({
   status: "idle", // idle | calling | ringing | connected
@@ -42,6 +51,8 @@ export const useCallStore = create((set, get) => ({
       peer.onicecandidate = ({ candidate }) => candidate && send("call:ice", from, { candidate });
       peer.ontrack = ({ streams }) => streams[0] && set({ remoteStream: streams[0], status: "connected" });
       await peer.setRemoteDescription(offer);
+      for (const candidate of pendingCandidates) await peer.addIceCandidate(candidate);
+      pendingCandidates = [];
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
       pendingOffer = null;
@@ -67,6 +78,7 @@ export const useCallStore = create((set, get) => ({
     peer = null;
     localStream = null;
     pendingOffer = null;
+    pendingCandidates = [];
     set({ status: "idle", peerId: null, localStream: null, remoteStream: null });
   },
 
@@ -78,10 +90,23 @@ export const useCallStore = create((set, get) => ({
       set({ status: "ringing", kind: payload.kind || "audio", peerId: payload.from });
     };
     const onAnswer = async ({ answer }) => {
-      await peer?.setRemoteDescription(answer);
-      set({ status: "connected" });
+      try {
+        await peer?.setRemoteDescription(answer);
+        for (const candidate of pendingCandidates) await peer?.addIceCandidate(candidate);
+        pendingCandidates = [];
+        set({ status: "connected" });
+      } catch {
+        set({ error: "The call could not establish a secure connection." });
+        get().end();
+      }
     };
-    const onIce = async ({ candidate }) => { try { await peer?.addIceCandidate(candidate); } catch { /* peer may have ended */ } };
+    const onIce = async ({ candidate }) => {
+      if (!peer?.remoteDescription) {
+        pendingCandidates.push(candidate);
+        return;
+      }
+      try { await peer.addIceCandidate(candidate); } catch { /* peer may have ended */ }
+    };
     const onEnd = () => get().end(false);
     const onReject = () => get().end(false);
     socket.on("call:offer", onOffer).on("call:answer", onAnswer).on("call:ice", onIce).on("call:end", onEnd).on("call:reject", onReject);
