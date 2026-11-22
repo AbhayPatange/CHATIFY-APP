@@ -117,6 +117,10 @@ export const useAuthStore = create((set, get) => ({
     // VITE_SOCKET_URL entirely.
     const socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
+      // The API is on api.pinglet.site while the app runs on www.pinglet.site.
+      // Socket.IO does not include cross-origin cookies unless this is explicit,
+      // so without it the server rejects signaling as unauthenticated.
+      withCredentials: true,
     });
 
     socket.on("getOnlineUsers", (userIds) => set({ onlineUsers: userIds }));
