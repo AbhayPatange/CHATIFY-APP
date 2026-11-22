@@ -70,3 +70,11 @@ test("rate limiter blocks after max and sets Retry-After", async () => {
   assert.ok(blocked.headers.get("retry-after"));
   s.close();
 });
+
+test("cookie-authenticated writes reject an untrusted browser origin", async () => {
+  const res = await fetch(base + "/api/auth/logout", {
+    method: "POST",
+    headers: { origin: "https://evil.example" },
+  });
+  assert.equal(res.status, 403);
+});

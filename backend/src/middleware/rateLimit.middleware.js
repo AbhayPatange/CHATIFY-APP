@@ -44,3 +44,21 @@ export function createRateLimiter({
     next();
   };
 }
+
+/**
+ * Require browser-originated, cookie-authenticated writes to come from an
+ * explicitly configured frontend. This complements SameSite cookies: CORS
+ * prevents reading responses but does not by itself prevent a forged write.
+ * Requests without an Origin header (native clients, curl, health tooling)
+ * are authenticated normally and remain supported.
+ */
+export function requireTrustedOrigin(allowedOrigins) {
+  const allowed = new Set(allowedOrigins);
+  return (req, res, next) => {
+    const origin = req.get("origin");
+    if (origin && !allowed.has(origin)) {
+      return res.status(403).json({ message: "Request origin is not allowed." });
+    }
+    next();
+  };
+}

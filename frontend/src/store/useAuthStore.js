@@ -91,7 +91,10 @@ export const useAuthStore = create((set, get) => ({
     // which previously allowed duplicate connections (e.g. React StrictMode double-run)
     if (!get().authUser || get().socket) return;
 
-    const socket = io("https://api.pinglet.site", {
+    // Keep socket traffic on the same configured endpoint as HTTP. The prior
+    // hard-coded host broke preview/custom-domain deployments and bypassed
+    // VITE_SOCKET_URL entirely.
+    const socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
     });
 

@@ -1,7 +1,10 @@
 import axios from "axios";
 
 export const API_URL = import.meta.env.VITE_API_URL || "/api";
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "/";
+// When HTTP is configured against a separate API origin, use that origin for
+// Socket.IO too unless an explicit socket endpoint is supplied.
+export const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL || (API_URL.startsWith("http") ? new URL(API_URL).origin : "/");
 
 export const axiosInstance = axios.create({
   baseURL: API_URL,

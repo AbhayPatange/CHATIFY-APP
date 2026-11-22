@@ -2,7 +2,8 @@ import express from "express";
 import { signup, login, logout, updateProfile } from "../controllers/auth.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { arcjetProtection } from "../middleware/arcjet.middleware.js";
-import { createRateLimiter } from "../middleware/rateLimit.middleware.js";
+import { createRateLimiter, requireTrustedOrigin } from "../middleware/rateLimit.middleware.js";
+import { ENV } from "../lib/env.js";
 
 const router = express.Router();
 
@@ -18,14 +19,20 @@ const signupLimiter = createRateLimiter({
   max: 10,
   message: "Too many sign-up attempts. Please try again later.",
 });
+const profileLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many profile updates. Please try again later.",
+});
+const trustedOrigin = requireTrustedOrigin(ENV.CLIENT_ORIGINS);
 
 router.use(arcjetProtection);
 
 router.post("/signup", signupLimiter, signup);
 router.post("/login", loginLimiter, login);
-router.post("/logout", logout);
+router.post("/logout", trustedOrigin, logout);
 
-router.put("/update-profile", protectRoute, updateProfile);
+router.put("/update-profile", trustedOrigin, protectRoute, profileLimiter, updateProfile);
 
 router.get("/check", protectRoute, (req, res) =>
   res.status(200).json({
