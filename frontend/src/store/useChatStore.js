@@ -13,6 +13,7 @@ const rank = (status) => RANK[status] ?? RANK.seen; // messages from before tick
 
 const initialState = {
   allContacts: [],
+  connectionInfo: { code: "", connected: [], incoming: [], outgoing: [] },
   chats: [], // each: user + { lastMessage, unreadCount }
   messages: [],
   replyTo: null,
@@ -77,13 +78,28 @@ export const useChatStore = create((set, get) => ({
   getAllContacts: async () => {
     set({ isUsersLoading: true });
     try {
-      const res = await axiosInstance.get("/messages/contacts");
-      set({ allContacts: res.data });
+      const res = await axiosInstance.get("/connections");
+      set({ connectionInfo: res.data, allContacts: res.data.connected });
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
       set({ isUsersLoading: false });
     }
+  },
+
+  requestConnection: async (code) => {
+    try { const res = await axiosInstance.post("/connections/request", { code }); toast.success(res.data.message); await get().getAllContacts(); return true; }
+    catch (error) { toast.error(getErrorMessage(error)); return false; }
+  },
+
+  acceptConnection: async (connectionId) => {
+    try { const res = await axiosInstance.post(`/connections/${connectionId}/accept`); toast.success(res.data.message); await get().getAllContacts(); return true; }
+    catch (error) { toast.error(getErrorMessage(error)); return false; }
+  },
+
+  removeConnection: async (connectionId) => {
+    try { await axiosInstance.delete(`/connections/${connectionId}`); await get().getAllContacts(); }
+    catch (error) { toast.error(getErrorMessage(error)); }
   },
 
   // silent: refresh in the background without showing the loading skeleton
@@ -237,6 +253,8 @@ export const useChatStore = create((set, get) => ({
     socket.on("messagesDelivered", handleDelivered);
     socket.on("messagesSeen", handleSeen);
     socket.on("chatRead", handleChatRead);
+    socket.on("connection:request", handleConnectionChange);
+    socket.on("connection:updated", handleConnectionChange);
     socket.io.on("reconnect", handleReconnect);
   },
 
@@ -259,6 +277,8 @@ function unsubscribeFromSocket(socket) {
   socket.off("messagesDelivered", handleDelivered);
   socket.off("messagesSeen", handleSeen);
   socket.off("chatRead", handleChatRead);
+    socket.off("connection:request", handleConnectionChange);
+    socket.off("connection:updated", handleConnectionChange);
   socket.io.off("reconnect", handleReconnect);
 }
 
@@ -315,6 +335,11 @@ function handleChatRead({ partnerId }) {
     unread: { ...unread, [partnerId]: 0 },
     chats: chats.map((c) => (c._id === partnerId ? { ...c, unreadCount: 0 } : c)),
   });
+}
+
+function handleConnectionChange() {
+  useChatStore.getState().getAllContacts();
+  useChatStore.getState().getMyChatPartners({ silent: true });
 }
 
 async function handleNewMessage(message) {

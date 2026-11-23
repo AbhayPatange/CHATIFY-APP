@@ -4,7 +4,7 @@ import { useChatStore } from "../store/useChatStore";
 const TABS = [
   { id: "chats", label: "All" },
   { id: "unread", label: "Unread" },
-  { id: "contacts", label: "Contacts" },
+  { id: "contacts", label: "Connections" },
 ];
 
 function ActiveTabSwitch() {
@@ -22,7 +22,7 @@ function ActiveTabSwitch() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={activeTab === "contacts" ? "Search contacts" : "Search chats"}
+          placeholder={activeTab === "contacts" ? "Search connections" : "Search chats"}
           aria-label="Search"
           className="w-full rounded-xl border border-pl-line bg-pl-header py-3 pl-10 pr-9 text-sm text-pl-text placeholder-pl-muted focus:outline-none focus:ring-1 focus:ring-pl-accent"
         />

@@ -8,6 +8,7 @@ import mongoose from "mongoose";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
+import connectionRoutes from "./routes/connection.route.js";
 import { ENV } from "./lib/env.js";
 import { securityHeaders } from "./middleware/security.middleware.js";
 import { apiNotFound, errorHandler } from "./middleware/error.middleware.js";
@@ -40,6 +41,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/messages", messageRoutes);
+  app.use("/api/connections", connectionRoutes);
   app.use("/api", apiNotFound);
 
   // serve the built React app (single-service deployment)

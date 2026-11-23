@@ -3,6 +3,7 @@ import { ENV } from "./env.js";
 import { socketAuthMiddleware } from "../middleware/socket.auth.middleware.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
 import User from "../models/User.js";
+import Connection from "../models/Connection.js";
 
 let io = null;
 
@@ -65,12 +66,19 @@ export function initSocket(httpServer) {
       socket.user = await User.findById(userId).select("blockedUsers");
     });
 
+    socket.on("connections:refresh", () => {
+      // The client uses this as a harmless hint to refresh its connection list.
+      // It deliberately exposes no account directory over Socket.IO.
+    });
+
     // WebRTC media stays peer-to-peer; Socket.IO only relays authenticated
     // signaling messages and never persists audio/video.
     for (const event of ["call:offer", "call:answer", "call:ice", "call:reject", "call:end"]) {
       socket.on(event, async ({ to, ...payload } = {}) => {
         if (typeof to !== "string" || to === userId || !onlineCounts.has(to)) return;
         if (socket.user?.blockedUsers?.some((id) => String(id) === to) || await User.exists({ _id: to, blockedUsers: userId })) return;
+        const connected = await Connection.exists({ status: "accepted", $or: [{ requester: userId, recipient: to }, { requester: to, recipient: userId }] });
+        if (!connected) return;
         io.to(to).emit(event, { from: userId, ...payload });
       });
     }

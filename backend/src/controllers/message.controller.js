@@ -2,14 +2,30 @@ import { emitToUser, isUserOnline } from "../lib/socket.js";
 import { isObjectId, isString } from "../lib/validators.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
 import User from "../models/User.js";
+import Connection from "../models/Connection.js";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
 
+const connectedFilter = (me, other) => ({
+  status: "accepted",
+  $or: [{ requester: me, recipient: other }, { requester: other, recipient: me }],
+});
+
+const isConnected = (me, other) => Connection.exists(connectedFilter(me, other));
+
+async function connectedPartnerIds(me) {
+  const rows = await Connection.find({ status: "accepted", $or: [{ requester: me }, { recipient: me }] })
+    .select("requester recipient")
+    .lean();
+  return rows.map((row) => String(row.requester) === String(me) ? row.recipient : row.requester);
+}
+
 export const getAllContacts = async (req, res, next) => {
   try {
-    // only expose what the UI needs: never other users' emails
-    const users = await User.find({ _id: { $ne: req.user._id, $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: req.user._id } })
+    // Only accepted connections appear here. There is intentionally no directory of users.
+    const partnerIds = await connectedPartnerIds(req.user._id);
+    const users = await User.find({ _id: { $in: partnerIds, $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: req.user._id } })
       .select("fullName profilePic encryptionPublicKey")
       .sort({ fullName: 1 })
       .limit(500)
@@ -30,6 +46,7 @@ export const getMessagesByUserId = async (req, res, next) => {
     const myId = req.user._id;
     const { id: userToChatId } = req.params;
     if (!isObjectId(userToChatId)) return res.status(400).json({ message: "Invalid user id." });
+    if (!await isConnected(myId, userToChatId)) return res.status(403).json({ message: "Accept a connection request before chatting." });
     if (req.user.blockedUsers?.some((id) => String(id) === userToChatId) || await User.exists({ _id: userToChatId, blockedUsers: myId })) return res.status(403).json({ message: "This conversation is unavailable." });
 
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || DEFAULT_PAGE_SIZE, 1), MAX_PAGE_SIZE);
@@ -63,6 +80,7 @@ export const sendMessage = async (req, res, next) => {
     if (!isObjectId(receiverId)) return res.status(400).json({ message: "Invalid user id." });
     if (!isEncryptedMessage(encrypted)) return res.status(400).json({ message: "An encrypted text message is required." });
     if (senderId.equals(receiverId)) return res.status(400).json({ message: "Cannot send messages to yourself." });
+    if (!await isConnected(senderId, receiverId)) return res.status(403).json({ message: "Accept a connection request before chatting." });
     if (req.user.blockedUsers?.some((id) => String(id) === receiverId) || await User.exists({ _id: receiverId, blockedUsers: senderId })) return res.status(403).json({ message: "This conversation is unavailable." });
     if (replyTo !== undefined && (!replyTo || typeof replyTo !== "object" || !isObjectId(replyTo.messageId) || !isObjectId(replyTo.senderId))) {
       return res.status(400).json({ message: "Invalid reply reference." });
@@ -107,6 +125,7 @@ export const markMessagesSeen = async (req, res, next) => {
     const me = req.user._id;
     const { id: partnerId } = req.params;
     if (!isObjectId(partnerId)) return res.status(400).json({ message: "Invalid user id." });
+    if (!await isConnected(me, partnerId)) return res.status(403).json({ message: "Accept a connection request before chatting." });
 
     const unread = await Message.find({
       senderId: partnerId,
@@ -150,6 +169,8 @@ export const markMessagesSeen = async (req, res, next) => {
 export const getChatPartners = async (req, res, next) => {
   try {
     const me = req.user._id;
+    const connectedIds = await connectedPartnerIds(me);
+    if (connectedIds.length === 0) return res.status(200).json([]);
 
     const partners = await Message.aggregate([
       { $match: { $or: [{ senderId: me }, { receiverId: me }] } },
@@ -178,7 +199,7 @@ export const getChatPartners = async (req, res, next) => {
       { $limit: 200 },
     ]);
 
-    const users = await User.find({ _id: { $in: partners.map((p) => p._id), $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: me } })
+    const users = await User.find({ _id: { $in: partners.map((p) => p._id).filter((id) => connectedIds.some((connectedId) => String(connectedId) === String(id))), $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: me } })
       .select("fullName profilePic encryptionPublicKey")
       .lean();
     const byId = new Map(users.map((u) => [u._id.toString(), u]));
