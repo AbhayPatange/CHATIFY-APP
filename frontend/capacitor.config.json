@@ -1,0 +1,9 @@
+{
+  "appId": "com.abhay.pinglet",
+  "appName": "Pinglet",
+  "webDir": "dist",
+  "server": {
+    "url": "https://pinglet.site",
+    "cleartext": false
+  }
+}

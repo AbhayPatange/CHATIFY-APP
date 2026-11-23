@@ -61,6 +61,22 @@ VITE_TURN_CREDENTIAL=...
 
 TURN allowance is bandwidth-based, not time-based. Direct peer-to-peer calls generally do not use relay allowance; calls that require a relay consume it. Any variable prefixed `VITE_` is included in the browser build, so use limited-scope TURN credentials and rotate them if exposed.
 
+## Android APK
+
+Pinglet is packaged as an Android app with Capacitor. The app opens `https://pinglet.site`, so changes deployed to the website are available in the installed app the next time it loads. The Android manifest also requests camera and microphone access only when a user starts a voice or video call.
+
+Every push to `main` runs the **Build Android APK** GitHub Action. Open the action run on GitHub and download the `Pinglet-debug-<commit>` artifact. It contains an installable debug APK. Android may ask you to allow installs from the browser or file manager used to open it.
+
+To create an APK locally:
+
+```bash
+cd frontend
+npm install
+npm run android:apk
+```
+
+The APK is written to `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+
 ## Production
 
 The backend serves the built frontend, so one service is enough.
