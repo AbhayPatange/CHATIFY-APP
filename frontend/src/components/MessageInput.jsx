@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { PaperclipIcon, SendIcon, XIcon } from "lucide-react";
+import { PaperclipIcon, ReplyIcon, SendIcon, XIcon } from "lucide-react";
 import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import { readFileAsDataURL, validateImageFile } from "../lib/image";
@@ -16,6 +16,8 @@ function MessageInput() {
   const textareaRef = useRef(null);
 
   const sendMessage = useChatStore((s) => s.sendMessage);
+  const replyTo = useChatStore((s) => s.replyTo);
+  const setReplyTo = useChatStore((s) => s.setReplyTo);
   const isSoundEnabled = useChatStore((s) => s.isSoundEnabled);
 
   // grow with the text (up to ~5 lines), like a phone chat box
@@ -77,6 +79,7 @@ function MessageInput() {
 
   return (
     <div className="shrink-0 bg-pl-header px-2 py-2 md:px-4">
+      {replyTo && <div className="mb-2 flex items-center gap-2 rounded-lg border-l-4 border-pl-accent bg-pl-selected px-3 py-2 text-sm"><ReplyIcon className="size-4 text-pl-accent" /><span className="min-w-0 flex-1 truncate text-pl-muted">Replying to: {replyTo.text || "Photo"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="text-pl-muted hover:text-pl-text"><XIcon className="size-4" /></button></div>}
       {imagePreview && (
         <div className="mb-2 flex items-center">
           <div className="relative">

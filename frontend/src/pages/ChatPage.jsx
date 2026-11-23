@@ -9,6 +9,7 @@ import ContactList from "../components/ContactList";
 import ChatContainer from "../components/ChatContainer";
 import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
 import CallOverlay from "../components/CallOverlay";
+import CallHistoryPanel from "../components/CallHistoryPanel";
 
 function ChatPage() {
   const activeTab = useChatStore((s) => s.activeTab);
@@ -53,6 +54,7 @@ function ChatPage() {
         {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}
       </section>
       <CallOverlay />
+      <CallHistoryPanel />
     </div>
   );
 }

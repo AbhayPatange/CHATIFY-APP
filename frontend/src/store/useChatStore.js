@@ -15,6 +15,7 @@ const initialState = {
   allContacts: [],
   chats: [], // each: user + { lastMessage, unreadCount }
   messages: [],
+  replyTo: null,
   hasMoreMessages: false,
   isLoadingOlder: false,
   unread: {}, // { [userId]: count }
@@ -66,8 +67,10 @@ export const useChatStore = create((set, get) => ({
     const unread = { ...get().unread };
     if (selectedUser) delete unread[selectedUser._id];
     // clear immediately so the previous conversation never flashes in the new one
-    set({ selectedUser, messages: [], hasMoreMessages: false, unread });
+    set({ selectedUser, messages: [], hasMoreMessages: false, unread, replyTo: null });
   },
+
+  setReplyTo: (replyTo) => set({ replyTo }),
 
   getAllContacts: async () => {
     set({ isUsersLoading: true });
@@ -139,7 +142,7 @@ export const useChatStore = create((set, get) => ({
   },
 
   sendMessage: async (messageData) => {
-    const { selectedUser } = get();
+    const { selectedUser, replyTo } = get();
     const { authUser, encryptionIdentity } = useAuthStore.getState();
     if (!selectedUser || !authUser) return false;
     if (messageData.image) {
@@ -161,16 +164,17 @@ export const useChatStore = create((set, get) => ({
       receiverId,
       text: messageData.text,
       image: messageData.image,
+      replyTo: replyTo ? { messageId: replyTo._id, senderId: replyTo.senderId } : undefined,
       status: "pending",
       createdAt: new Date().toISOString(),
       isOptimistic: true,
     };
-    set((s) => ({ messages: [...s.messages, optimistic] }));
+    set((s) => ({ messages: [...s.messages, optimistic], replyTo: null }));
     bumpChat(receiverId, optimistic);
 
     try {
       const encrypted = await encryptText(messageData.text, selectedUser.encryptionPublicKey, encryptionIdentity);
-      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted });
+      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted, replyTo: optimistic.replyTo });
       // a "seen" event can beat the HTTP response: keep whichever status is further along
       const early = earlyStatus.get(res.data._id);
       earlyStatus.delete(res.data._id);

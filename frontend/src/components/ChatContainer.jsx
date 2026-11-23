@@ -18,9 +18,11 @@ function ChatContainer() {
   const getMessagesByUserId = useChatStore((s) => s.getMessagesByUserId);
   const loadOlderMessages = useChatStore((s) => s.loadOlderMessages);
   const markChatSeen = useChatStore((s) => s.markChatSeen);
+  const setReplyTo = useChatStore((s) => s.setReplyTo);
   const authUser = useAuthStore((s) => s.authUser);
   const messageEndRef = useRef(null);
   const prevLastId = useRef(undefined);
+  const swipeStart = useRef({});
 
   const selectedUserId = selectedUser._id;
 
@@ -107,10 +109,17 @@ function ChatContainer() {
 
                   <div className={`flex ${mine ? "justify-end" : "justify-start"} ${startsRun ? "mt-2" : "mt-0.5"}`}>
                     <div
+                      onTouchStart={(event) => { swipeStart.current[msg._id] = event.touches[0]?.clientX; }}
+                      onTouchEnd={(event) => {
+                        const start = swipeStart.current[msg._id];
+                        if (start && event.changedTouches[0]?.clientX - start > 64) setReplyTo(msg);
+                        delete swipeStart.current[msg._id];
+                      }}
                       className={`bubble ${mine ? "bubble-out mr-2" : "bubble-in ml-2"} ${startsRun ? "has-tail" : ""} ${
                         msg.image ? "p-1" : "px-2.5 py-1.5"
                       }`}
                     >
+                      {msg.replyTo && <div className="mb-1.5 truncate rounded border-l-2 border-pl-accent bg-black/10 px-2 py-1 text-xs text-pl-muted">↩ {messages.find((m) => m._id === msg.replyTo.messageId)?.text || "Reply to a message"}</div>}
                       {msg.image && (
                         <img
                           src={msg.image}

@@ -5,11 +5,13 @@ import { useAuthStore } from "../store/useAuthStore";
 
 export default function CallOverlay() {
   const socket = useAuthStore((state) => state.socket);
+  const authUser = useAuthStore((state) => state.authUser);
   const { status, kind, localStream, remoteStream, muted, accept, reject, end, toggleMute } = useCallStore();
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
   const remoteAudio = useRef(null);
   useEffect(() => useCallStore.getState().bindSocket(socket), [socket]);
+  useEffect(() => { if (authUser) useCallStore.getState().loadCallHistory(); }, [authUser]);
   useEffect(() => { if (localVideo.current) localVideo.current.srcObject = localStream; }, [localStream]);
   useEffect(() => { if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream; }, [remoteStream]);
   useEffect(() => { if (remoteAudio.current) remoteAudio.current.srcObject = remoteStream; }, [remoteStream]);

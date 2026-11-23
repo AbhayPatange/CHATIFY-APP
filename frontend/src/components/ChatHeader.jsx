@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeftIcon, PhoneIcon, VideoIcon, XIcon } from "lucide-react";
+import { ArrowLeftIcon, Clock3Icon, PhoneIcon, VideoIcon, XIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
@@ -12,6 +12,7 @@ function ChatHeader() {
   const onlineUsers = useAuthStore((s) => s.onlineUsers);
   const isOnline = onlineUsers.includes(selectedUser._id);
   const startCall = useCallStore((state) => state.start);
+  const toggleCallHistory = useCallStore((state) => state.toggleCallHistory);
   const [pendingCall, setPendingCall] = useState(null);
   const requestCall = (kind) => {
     if (!isOnline) {
@@ -52,6 +53,7 @@ function ChatHeader() {
         <p className={`text-xs ${isOnline ? "text-pl-accent" : "text-pl-muted"}`}>{isOnline ? "online" : "offline"}</p>
       </div>
 
+      <button type="button" onClick={toggleCallHistory} aria-label="Call history" title="Call history" className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><Clock3Icon className="size-5" /></button>
       <button type="button" onClick={() => requestCall("audio")} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><PhoneIcon className="size-5" /></button>
       <button type="button" onClick={() => requestCall("video")} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><VideoIcon className="size-5" /></button>
 

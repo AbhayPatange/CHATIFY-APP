@@ -21,6 +21,10 @@ const messageSchema = new mongoose.Schema(
       version: { type: Number },
     },
     image: { type: String },
+    replyTo: {
+      messageId: { type: String, maxlength: 24 },
+      senderId: { type: String, maxlength: 24 },
+    },
     status: {
       type: String,
       enum: Object.values(MESSAGE_STATUS),

@@ -14,6 +14,13 @@ let peer = null;
 let localStream = null;
 let pendingOffer = null;
 let pendingCandidates = [];
+let activeHistoryId = null;
+
+const historyKey = () => `pinglet-call-history:${useAuthStore.getState().authUser?._id || "anonymous"}`;
+const readHistory = () => {
+  try { return JSON.parse(localStorage.getItem(historyKey()) || "[]"); } catch { return []; }
+};
+const writeHistory = (history) => localStorage.setItem(historyKey(), JSON.stringify(history.slice(0, 100)));
 
 export const useCallStore = create((set, get) => ({
   status: "idle", // idle | calling | ringing | connected
@@ -23,6 +30,20 @@ export const useCallStore = create((set, get) => ({
   remoteStream: null,
   muted: false,
   error: "",
+  callHistory: [],
+  isHistoryOpen: false,
+
+  loadCallHistory: () => set({ callHistory: readHistory() }),
+  toggleCallHistory: () => set((state) => ({ isHistoryOpen: !state.isHistoryOpen })),
+  closeCallHistory: () => set({ isHistoryOpen: false }),
+
+  beginHistory: (kind, direction, peerId) => {
+    const entry = { id: crypto.randomUUID(), kind, direction, peerId, startedAt: new Date().toISOString(), endedAt: null };
+    activeHistoryId = entry.id;
+    const history = [entry, ...get().callHistory];
+    writeHistory(history);
+    set({ callHistory: history });
+  },
 
   start: async (peerId, kind) => {
     if (get().status !== "idle") return;
@@ -35,6 +56,7 @@ export const useCallStore = create((set, get) => ({
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
       set({ status: "calling", kind, peerId, localStream, muted: false, error: "" });
+      get().beginHistory(kind, "outgoing", peerId);
       send("call:offer", peerId, { offer, kind });
     } catch (error) {
       get().end();
@@ -58,6 +80,7 @@ export const useCallStore = create((set, get) => ({
       await peer.setLocalDescription(answer);
       pendingOffer = null;
       set({ status: "connected", kind, peerId: from, localStream, muted: false, error: "" });
+      get().beginHistory(kind, "incoming", from);
       send("call:answer", from, { answer });
     } catch {
       get().end();
@@ -86,6 +109,13 @@ export const useCallStore = create((set, get) => ({
     localStream = null;
     pendingOffer = null;
     pendingCandidates = [];
+    if (activeHistoryId) {
+      const endedAt = new Date().toISOString();
+      const history = get().callHistory.map((entry) => entry.id === activeHistoryId ? { ...entry, endedAt } : entry);
+      writeHistory(history);
+      set({ callHistory: history });
+      activeHistoryId = null;
+    }
     set({ status: "idle", peerId: null, localStream: null, remoteStream: null, muted: false });
   },
 

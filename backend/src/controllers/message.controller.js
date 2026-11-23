@@ -57,11 +57,14 @@ export const sendMessage = async (req, res, next) => {
   try {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
-    const { encrypted } = req.body ?? {};
+    const { encrypted, replyTo } = req.body ?? {};
 
     if (!isObjectId(receiverId)) return res.status(400).json({ message: "Invalid user id." });
     if (!isEncryptedMessage(encrypted)) return res.status(400).json({ message: "An encrypted text message is required." });
     if (senderId.equals(receiverId)) return res.status(400).json({ message: "Cannot send messages to yourself." });
+    if (replyTo !== undefined && (!replyTo || typeof replyTo !== "object" || !isObjectId(replyTo.messageId) || !isObjectId(replyTo.senderId))) {
+      return res.status(400).json({ message: "Invalid reply reference." });
+    }
 
     const receiverExists = await User.exists({ _id: receiverId });
     if (!receiverExists) return res.status(404).json({ message: "Receiver not found." });
@@ -73,6 +76,7 @@ export const sendMessage = async (req, res, next) => {
       senderId,
       receiverId,
       encrypted,
+      replyTo: replyTo ? { messageId: String(replyTo.messageId), senderId: String(replyTo.senderId) } : undefined,
       status: delivered ? MESSAGE_STATUS.DELIVERED : MESSAGE_STATUS.SENT,
       deliveredAt: delivered ? new Date() : undefined,
     });
