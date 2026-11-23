@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { LoaderIcon } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { LoaderIcon, ReplyIcon } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { formatDayLabel, formatTime, isSameDay } from "../lib/time";
@@ -23,6 +23,7 @@ function ChatContainer() {
   const messageEndRef = useRef(null);
   const prevLastId = useRef(undefined);
   const swipeStart = useRef({});
+  const [swipe, setSwipe] = useState({ id: null, offset: 0 });
 
   const selectedUserId = selectedUser._id;
 
@@ -107,15 +108,32 @@ function ChatContainer() {
                     </div>
                   )}
 
-                  <div className={`flex ${mine ? "justify-end" : "justify-start"} ${startsRun ? "mt-2" : "mt-0.5"}`}>
+                  <div className={`relative flex ${mine ? "justify-end" : "justify-start"} ${startsRun ? "mt-2" : "mt-0.5"}`}>
+                    {swipe.id === msg._id && <ReplyIcon className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-pl-accent" style={{ opacity: Math.min(swipe.offset / 48, 1) }} />}
                     <div
-                      onTouchStart={(event) => { swipeStart.current[msg._id] = event.touches[0]?.clientX; }}
+                      onTouchStart={(event) => {
+                        const touch = event.touches[0];
+                        swipeStart.current[msg._id] = touch ? { x: touch.clientX, y: touch.clientY } : null;
+                        setSwipe({ id: msg._id, offset: 0 });
+                      }}
+                      onTouchMove={(event) => {
+                        const start = swipeStart.current[msg._id];
+                        const touch = event.touches[0];
+                        if (!start || !touch) return;
+                        const distance = touch.clientX - start.x;
+                        const vertical = Math.abs(touch.clientY - start.y);
+                        if (vertical > Math.abs(distance)) return;
+                        setSwipe({ id: msg._id, offset: Math.max(0, Math.min(distance, 88)) });
+                      }}
                       onTouchEnd={(event) => {
                         const start = swipeStart.current[msg._id];
-                        if (start && event.changedTouches[0]?.clientX - start > 64) setReplyTo(msg);
+                        if (start && event.changedTouches[0]?.clientX - start.x > 64) setReplyTo(msg);
                         delete swipeStart.current[msg._id];
+                        setSwipe({ id: null, offset: 0 });
                       }}
-                      className={`bubble ${mine ? "bubble-out mr-2" : "bubble-in ml-2"} ${startsRun ? "has-tail" : ""} ${
+                      onTouchCancel={() => { delete swipeStart.current[msg._id]; setSwipe({ id: null, offset: 0 }); }}
+                      style={{ transform: swipe.id === msg._id ? `translateX(${swipe.offset}px)` : undefined }}
+                      className={`bubble touch-pan-y transition-transform ${mine ? "bubble-out mr-2" : "bubble-in ml-2"} ${startsRun ? "has-tail" : ""} ${
                         msg.image ? "p-1" : "px-2.5 py-1.5"
                       }`}
                     >
