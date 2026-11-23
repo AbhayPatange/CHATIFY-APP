@@ -14,6 +14,7 @@ export const useAuthStore = create((set, get) => ({
   socket: null,
   onlineUsers: [],
   encryptionIdentity: null,
+  blockedUsers: [],
 
   checkAuth: async () => {
     try {
@@ -35,6 +36,7 @@ export const useAuthStore = create((set, get) => ({
       const { identity, payload } = await createEncryptionIdentity(data.password);
       const res = await axiosInstance.post("/auth/signup", { ...data, ...payload });
       set({ authUser: res.data, encryptionIdentity: identity });
+      get().loadBlockedUsers();
       toast.success("Account created successfully!");
       get().connectSocket();
     } catch (error) {
@@ -57,6 +59,7 @@ export const useAuthStore = create((set, get) => ({
         identity = created.identity;
       }
       set({ authUser: res.data, encryptionIdentity: identity });
+      get().loadBlockedUsers();
       toast.success("Logged in successfully");
       get().connectSocket();
     } catch (error) {
@@ -70,7 +73,7 @@ export const useAuthStore = create((set, get) => ({
   clearSession: () => {
     get().disconnectSocket();
     useChatStore.getState().reset();
-    set({ authUser: null, encryptionIdentity: null });
+    set({ authUser: null, encryptionIdentity: null, blockedUsers: [] });
   },
 
   logout: async () => {
@@ -96,6 +99,28 @@ export const useAuthStore = create((set, get) => ({
     } finally {
       set({ isUpdatingProfile: false });
     }
+  },
+
+  loadBlockedUsers: async () => {
+    try { const res = await axiosInstance.get("/auth/blocked"); set({ blockedUsers: res.data }); } catch { /* list can be retried */ }
+  },
+
+  setUserBlocked: async (userId, blocked) => {
+    try {
+      const method = blocked ? "post" : "delete";
+      await axiosInstance[method](`/auth/block/${userId}`);
+      const { chats, allContacts, selectedUser } = useChatStore.getState();
+      if (blocked && selectedUser?._id === userId) useChatStore.getState().setSelectedUser(null);
+      useChatStore.setState({
+        chats: blocked ? chats.filter((user) => user._id !== userId) : chats,
+        allContacts: blocked ? allContacts.filter((user) => user._id !== userId) : allContacts,
+      });
+      await get().loadBlockedUsers();
+      if (blocked) get().socket?.emit("presence:refresh");
+      if (!blocked) useChatStore.getState().getAllContacts();
+      toast.success(blocked ? "User blocked" : "User unblocked");
+      return true;
+    } catch (error) { toast.error(getErrorMessage(error)); return false; }
   },
 
   forgotPassword: async (email) => {

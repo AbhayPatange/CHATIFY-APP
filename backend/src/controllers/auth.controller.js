@@ -5,7 +5,7 @@ import { clearAuthCookie, generateToken } from "../lib/utils.js";
 import { ENV } from "../lib/env.js";
 import cloudinary from "../lib/cloudinary.js";
 import User from "../models/User.js";
-import { EMAIL_RE, isString, normalizeEmail, validateImageDataUrl, validateSignupInput } from "../lib/validators.js";
+import { EMAIL_RE, isObjectId, isString, normalizeEmail, validateImageDataUrl, validateSignupInput } from "../lib/validators.js";
 
 const BCRYPT_ROUNDS = 12;
 // compared against when the email is unknown so login timing doesn't reveal which emails exist
@@ -182,4 +182,30 @@ export const updateProfile = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+export const blockUser = async (req, res, next) => {
+  try {
+    const targetId = req.params.id;
+    if (!isObjectId(targetId) || String(req.user._id) === targetId) return res.status(400).json({ message: "Invalid user." });
+    if (!await User.exists({ _id: targetId })) return res.status(404).json({ message: "User not found." });
+    await User.updateOne({ _id: req.user._id }, { $addToSet: { blockedUsers: targetId } });
+    res.status(200).json({ blocked: true, userId: targetId });
+  } catch (error) { next(error); }
+};
+
+export const unblockUser = async (req, res, next) => {
+  try {
+    const targetId = req.params.id;
+    if (!isObjectId(targetId)) return res.status(400).json({ message: "Invalid user." });
+    await User.updateOne({ _id: req.user._id }, { $pull: { blockedUsers: targetId } });
+    res.status(200).json({ blocked: false, userId: targetId });
+  } catch (error) { next(error); }
+};
+
+export const getBlockedUsers = async (req, res, next) => {
+  try {
+    const users = await User.find({ _id: { $in: req.user.blockedUsers || [] } }).select("fullName profilePic").lean();
+    res.status(200).json(users);
+  } catch (error) { next(error); }
 };

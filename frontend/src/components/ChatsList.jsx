@@ -57,13 +57,13 @@ function ChatsList() {
               type="button"
               aria-current={isOpen}
               onClick={() => setSelectedUser(chat)}
-              className={`flex w-full items-center gap-3 pl-3 text-left transition-colors hover:bg-pl-hover ${
+              className={`mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-left transition-colors hover:bg-pl-hover ${
                 isOpen ? "bg-pl-selected" : ""
               }`}
             >
               <Avatar src={chat.profilePic} name={chat.fullName} size="size-[49px]" online={onlineUsers.includes(chat._id)} />
 
-              <div className="min-w-0 flex-1 border-b border-pl-line py-3 pr-3">
+              <div className="min-w-0 flex-1 py-3.5 pr-3">
                 <div className="flex items-baseline justify-between gap-2">
                   <h4 className="truncate text-[17px] text-pl-text">{chat.fullName}</h4>
                   {last && (

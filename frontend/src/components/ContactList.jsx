@@ -39,10 +39,10 @@ function ContactList() {
             <button
               type="button"
               onClick={() => setSelectedUser(contact)}
-              className="flex w-full items-center gap-3 pl-3 text-left transition-colors hover:bg-pl-hover"
+              className="mx-2 flex w-[calc(100%-1rem)] items-center gap-3 rounded-2xl px-3 text-left transition-colors hover:bg-pl-hover"
             >
               <Avatar src={contact.profilePic} name={contact.fullName} size="size-[49px]" online={online} />
-              <div className="min-w-0 flex-1 border-b border-pl-line py-3.5 pr-3">
+              <div className="min-w-0 flex-1 py-3.5 pr-3">
                 <h4 className="truncate text-[17px] text-pl-text">{contact.fullName}</h4>
                 <p className={`text-sm ${online ? "text-pl-accent" : "text-pl-muted"}`}>
                   {online ? "online" : "offline"}

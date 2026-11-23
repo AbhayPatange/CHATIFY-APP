@@ -22,6 +22,7 @@ const initialState = {
   search: "",
   activeTab: "chats", // chats | unread | contacts
   selectedUser: null,
+  profileUser: null,
   isUsersLoading: false,
   isMessagesLoading: false,
 };
@@ -59,6 +60,7 @@ export const useChatStore = create((set, get) => ({
 
   setActiveTab: (tab) => set({ activeTab: tab }),
   setSearch: (search) => set({ search }),
+  setProfileUser: (profileUser) => set({ profileUser }),
 
   setSelectedUser: (selectedUser) => {
     const current = get().selectedUser;

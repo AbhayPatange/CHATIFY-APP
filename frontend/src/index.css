@@ -15,6 +15,7 @@ body,
 body {
   @apply bg-pl-bg text-pl-text font-sans antialiased;
   overscroll-behavior: none;
+  background-image: radial-gradient(circle at 10% 0%, rgba(112,224,218,.1), transparent 36%), radial-gradient(circle at 90% 90%, rgba(136,123,255,.1), transparent 42%);
 }
 
 /* thin, quiet scrollbars like a chat app */
@@ -30,14 +31,13 @@ body {
 
 /* chat wallpaper: dark background with a faint repeating doodle */
 .chat-wallpaper {
-  background-color: #0b141a;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160' fill='none' stroke='%23ffffff' stroke-opacity='.045' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 24h22a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H32l-8 7v-7h-4a6 6 0 0 1-6-6V30a6 6 0 0 1 6-6z'/%3E%3Ccircle cx='112' cy='30' r='9'/%3E%3Cpath d='M108 30l3 3 6-6'/%3E%3Cpath d='M30 112l10 10m0-10L30 122'/%3E%3Cpath d='M104 108q8-10 16 0t16 0'/%3E%3Ccircle cx='80' cy='80' r='3'/%3E%3C/svg%3E");
-  background-size: 160px 160px;
+  background-color: #0d1320;
+  background-image: radial-gradient(circle at 18% 24%, rgba(112,224,218,.07), transparent 30%), radial-gradient(circle at 80% 72%, rgba(155,175,255,.06), transparent 35%);
 }
 
 /* message bubbles with a little tail on the first message of a run */
 .bubble {
-  @apply relative rounded-lg shadow-sm;
+  @apply relative rounded-2xl shadow-sm;
   max-width: min(85%, 34rem);
 }
 .bubble-in {
@@ -47,10 +47,10 @@ body {
   @apply bg-pl-out text-pl-text;
 }
 .bubble-in.has-tail {
-  border-top-left-radius: 0;
+  border-top-left-radius: 5px;
 }
 .bubble-out.has-tail {
-  border-top-right-radius: 0;
+  border-top-right-radius: 5px;
 }
 .bubble-in.has-tail::before,
 .bubble-out.has-tail::before {

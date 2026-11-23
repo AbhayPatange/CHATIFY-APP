@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { ENV } from "./env.js";
 import { socketAuthMiddleware } from "../middleware/socket.auth.middleware.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
+import User from "../models/User.js";
 
 let io = null;
 
@@ -60,11 +61,16 @@ export function initSocket(httpServer) {
     broadcastOnlineUsers();
     markPendingAsDelivered(userId);
 
+    socket.on("presence:refresh", async () => {
+      socket.user = await User.findById(userId).select("blockedUsers");
+    });
+
     // WebRTC media stays peer-to-peer; Socket.IO only relays authenticated
     // signaling messages and never persists audio/video.
     for (const event of ["call:offer", "call:answer", "call:ice", "call:reject", "call:end"]) {
-      socket.on(event, ({ to, ...payload } = {}) => {
+      socket.on(event, async ({ to, ...payload } = {}) => {
         if (typeof to !== "string" || to === userId || !onlineCounts.has(to)) return;
+        if (socket.user?.blockedUsers?.some((id) => String(id) === to) || await User.exists({ _id: to, blockedUsers: userId })) return;
         io.to(to).emit(event, { from: userId, ...payload });
       });
     }

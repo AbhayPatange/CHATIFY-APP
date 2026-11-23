@@ -14,7 +14,8 @@ function ActiveTabSwitch() {
   const setSearch = useChatStore((s) => s.setSearch);
 
   return (
-    <div className="shrink-0 space-y-2 border-b border-pl-line px-3 py-2">
+    <div className="shrink-0 space-y-4 border-b border-pl-line px-5 pb-5 pt-2">
+      <div><h1 className="text-2xl font-semibold tracking-tight text-pl-text">Messages</h1><p className="text-xs text-pl-muted">A little closer, every day.</p></div>
       <div className="relative">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-pl-muted" />
         <input
@@ -23,7 +24,7 @@ function ActiveTabSwitch() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder={activeTab === "contacts" ? "Search contacts" : "Search chats"}
           aria-label="Search"
-          className="w-full rounded-lg bg-pl-header py-2 pl-10 pr-9 text-sm text-pl-text placeholder-pl-muted focus:outline-none focus:ring-1 focus:ring-pl-accent"
+          className="w-full rounded-xl border border-pl-line bg-pl-header py-3 pl-10 pr-9 text-sm text-pl-text placeholder-pl-muted focus:outline-none focus:ring-1 focus:ring-pl-accent"
         />
         {search && (
           <button
@@ -46,7 +47,7 @@ function ActiveTabSwitch() {
             onClick={() => setActiveTab(tab.id)}
             className={`rounded-full px-3 py-1 text-sm transition-colors ${
               activeTab === tab.id
-                ? "bg-[#103529] text-pl-accent"
+                ? "bg-pl-accent text-pl-bg"
                 : "bg-pl-header text-pl-muted hover:bg-pl-selected"
             }`}
           >

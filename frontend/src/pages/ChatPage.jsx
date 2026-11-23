@@ -10,6 +10,7 @@ import ChatContainer from "../components/ChatContainer";
 import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
 import CallOverlay from "../components/CallOverlay";
 import CallHistoryPanel from "../components/CallHistoryPanel";
+import UserProfilePanel from "../components/UserProfilePanel";
 
 function ChatPage() {
   const activeTab = useChatStore((s) => s.activeTab);
@@ -35,12 +36,12 @@ function ChatPage() {
   }, [totalUnread]);
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-[1600px] overflow-hidden bg-pl-panel xl:my-5 xl:h-[calc(100dvh-2.5rem)] xl:rounded-lg xl:shadow-2xl">
+    <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden border border-pl-line bg-pl-panel shadow-2xl xl:my-5 xl:h-[calc(100dvh-2.5rem)] xl:rounded-[28px]">
       {/* LEFT: on phones it is hidden while a conversation is open */}
       <aside
         className={`${
           selectedUser ? "hidden md:flex" : "flex"
-        } w-full shrink-0 flex-col border-r border-pl-line bg-pl-panel md:w-[360px] lg:w-[400px]`}
+        } w-full shrink-0 flex-col border-r border-pl-line bg-pl-panel md:w-[360px] lg:w-[410px]`}
       >
         <ProfileHeader />
         <ActiveTabSwitch />
@@ -55,6 +56,7 @@ function ChatPage() {
       </section>
       <CallOverlay />
       <CallHistoryPanel />
+      <UserProfilePanel />
     </div>
   );
 }
