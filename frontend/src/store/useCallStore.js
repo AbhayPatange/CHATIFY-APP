@@ -21,6 +21,7 @@ export const useCallStore = create((set, get) => ({
   peerId: null,
   localStream: null,
   remoteStream: null,
+  muted: false,
   error: "",
 
   start: async (peerId, kind) => {
@@ -33,7 +34,7 @@ export const useCallStore = create((set, get) => ({
       peer.ontrack = ({ streams }) => streams[0] && set({ remoteStream: streams[0], status: "connected" });
       const offer = await peer.createOffer();
       await peer.setLocalDescription(offer);
-      set({ status: "calling", kind, peerId, localStream, error: "" });
+      set({ status: "calling", kind, peerId, localStream, muted: false, error: "" });
       send("call:offer", peerId, { offer, kind });
     } catch (error) {
       get().end();
@@ -56,7 +57,7 @@ export const useCallStore = create((set, get) => ({
       const answer = await peer.createAnswer();
       await peer.setLocalDescription(answer);
       pendingOffer = null;
-      set({ status: "connected", kind, peerId: from, localStream, error: "" });
+      set({ status: "connected", kind, peerId: from, localStream, muted: false, error: "" });
       send("call:answer", from, { answer });
     } catch {
       get().end();
@@ -67,7 +68,13 @@ export const useCallStore = create((set, get) => ({
   reject: () => {
     if (pendingOffer) send("call:reject", pendingOffer.from, {});
     pendingOffer = null;
-    set({ status: "idle", peerId: null });
+    set({ status: "idle", peerId: null, muted: false });
+  },
+
+  toggleMute: () => {
+    const muted = !get().muted;
+    localStream?.getAudioTracks().forEach((track) => { track.enabled = !muted; });
+    set({ muted });
   },
 
   end: (notify = true) => {
@@ -79,7 +86,7 @@ export const useCallStore = create((set, get) => ({
     localStream = null;
     pendingOffer = null;
     pendingCandidates = [];
-    set({ status: "idle", peerId: null, localStream: null, remoteStream: null });
+    set({ status: "idle", peerId: null, localStream: null, remoteStream: null, muted: false });
   },
 
   bindSocket: (socket) => {

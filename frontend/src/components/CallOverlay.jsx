@@ -1,28 +1,31 @@
 import { useEffect, useRef } from "react";
-import { PhoneCallIcon, PhoneOffIcon, VideoIcon, XIcon } from "lucide-react";
+import { MicIcon, MicOffIcon, PhoneCallIcon, PhoneOffIcon, VideoIcon } from "lucide-react";
 import { useCallStore } from "../store/useCallStore";
 import { useAuthStore } from "../store/useAuthStore";
 
 export default function CallOverlay() {
   const socket = useAuthStore((state) => state.socket);
-  const { status, kind, localStream, remoteStream, accept, reject, end } = useCallStore();
+  const { status, kind, localStream, remoteStream, muted, accept, reject, end, toggleMute } = useCallStore();
   const localVideo = useRef(null);
   const remoteVideo = useRef(null);
+  const remoteAudio = useRef(null);
   useEffect(() => useCallStore.getState().bindSocket(socket), [socket]);
   useEffect(() => { if (localVideo.current) localVideo.current.srcObject = localStream; }, [localStream]);
   useEffect(() => { if (remoteVideo.current) remoteVideo.current.srcObject = remoteStream; }, [remoteStream]);
+  useEffect(() => { if (remoteAudio.current) remoteAudio.current.srcObject = remoteStream; }, [remoteStream]);
   if (status === "idle") return null;
   const ringing = status === "ringing";
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4">
-    <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-pl-panel p-4 text-pl-text shadow-2xl">
-      <button type="button" onClick={end} aria-label="End call" className="absolute right-3 top-3 text-pl-muted hover:text-white"><XIcon /></button>
-      <div className="mb-3 flex items-center gap-2"><PhoneCallIcon className="text-pl-accent" /><span>{ringing ? "Incoming call" : status === "calling" ? "Calling…" : "Connected"}</span></div>
-      {kind === "video" && <div className="relative aspect-video overflow-hidden rounded-xl bg-black"><video ref={remoteVideo} autoPlay playsInline className="h-full w-full object-contain" /><video ref={localVideo} autoPlay muted playsInline className="absolute bottom-3 right-3 h-24 w-32 rounded-lg object-cover" /></div>}
-      {kind === "audio" && <div className="grid h-48 place-items-center rounded-xl bg-pl-bg text-pl-muted">Voice call</div>}
-      <div className="mt-4 flex justify-center gap-3">
-        {ringing && <><button type="button" onClick={accept} className="grid size-12 place-items-center rounded-full bg-pl-accent text-pl-bg" aria-label="Accept call"><PhoneCallIcon /></button><button type="button" onClick={reject} className="grid size-12 place-items-center rounded-full bg-red-600 text-white" aria-label="Reject call"><PhoneOffIcon /></button></>}
-        {!ringing && <button type="button" onClick={end} className="grid size-12 place-items-center rounded-full bg-red-600 text-white" aria-label="End call"><PhoneOffIcon /></button>}
-      </div>
+  const label = ringing ? "Incoming call" : status === "calling" ? "Calling…" : kind === "video" ? "Video call" : "Voice call";
+  return <div className="fixed inset-0 z-50 overflow-hidden bg-black text-white">
+    <audio ref={remoteAudio} autoPlay playsInline />
+    {kind === "video" ? <>
+      <video ref={remoteVideo} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
+      {!remoteStream && <div className="absolute inset-0 grid place-items-center bg-gradient-to-br from-pl-panel to-black"><div className="text-center text-pl-muted"><VideoIcon className="mx-auto mb-3 size-12" /><p>{ringing ? "Answer to start video" : "Waiting for the other person…"}</p></div></div>}
+      <video ref={localVideo} autoPlay muted playsInline className="absolute right-4 top-16 h-32 w-24 rounded-2xl border border-white/20 bg-pl-panel object-cover shadow-xl sm:h-44 sm:w-32" />
+    </> : <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-pl-panel via-pl-bg to-black"><div className="text-center"><div className="mx-auto mb-5 grid size-24 place-items-center rounded-full bg-pl-accent/20"><PhoneCallIcon className="size-11 text-pl-accent" /></div><p className="text-xl font-semibold">{label}</p><p className="mt-2 text-sm text-pl-muted">{ringing ? "Someone wants to talk" : status === "calling" ? "Ringing…" : muted ? "Your microphone is muted" : "Connected"}</p></div></div>}
+    <div className="absolute inset-x-0 top-0 flex items-center gap-2 bg-gradient-to-b from-black/70 to-transparent p-5"><PhoneCallIcon className="size-5 text-pl-accent" /><span className="font-medium">{label}</span></div>
+    <div className="absolute inset-x-0 bottom-0 flex justify-center gap-4 bg-gradient-to-t from-black/80 via-black/35 to-transparent px-5 pb-8 pt-20">
+      {ringing ? <><button type="button" onClick={accept} className="grid size-14 place-items-center rounded-full bg-pl-accent text-pl-bg shadow-lg" aria-label="Accept call"><PhoneCallIcon /></button><button type="button" onClick={reject} className="grid size-14 place-items-center rounded-full bg-red-600 text-white shadow-lg" aria-label="Reject call"><PhoneOffIcon /></button></> : <><button type="button" onClick={toggleMute} aria-label={muted ? "Unmute microphone" : "Mute microphone"} aria-pressed={muted} className={`grid size-14 place-items-center rounded-full shadow-lg ${muted ? "bg-white text-black" : "bg-white/20 text-white hover:bg-white/30"}`}>{muted ? <MicOffIcon /> : <MicIcon />}</button><button type="button" onClick={end} className="grid size-14 place-items-center rounded-full bg-red-600 text-white shadow-lg" aria-label="End call"><PhoneOffIcon /></button></>}
     </div>
   </div>;
 }

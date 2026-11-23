@@ -9,7 +9,7 @@
 - 📨 Welcome email on signup (Resend, optional)
 - 🚦 Rate limiting: Arcjet (optional) + built-in brute-force protection on login/signup
 - 🎨 React 19, Tailwind, Zustand
-- No voice or video calls (by design, for now)
+- 📞 Browser-based voice and video calls with WebRTC, Socket.IO signaling, TURN fallback, fullscreen video, and microphone mute
 
 ## How the ticks work
 
@@ -46,6 +46,20 @@ See [`backend/.env.example`](backend/.env.example). Required: `MONGO_URI`, `JWT_
 In production also required: `CLIENT_URL` (public URL of the site) and a `JWT_SECRET` of ≥ 32 chars –
 the server refuses to start otherwise. Cloudinary, Resend and Arcjet are optional; when missing, the related
 feature is disabled and a warning is logged at startup.
+
+## Voice and video calls
+
+Calls use peer-to-peer WebRTC media encrypted in transit; Pinglet only relays authenticated signaling and does not record call audio or video. Both participants must be signed in and online. The browser asks for microphone permission for voice calls, and camera plus microphone permission for video calls.
+
+For reliable calls across mobile networks, corporate Wi-Fi, and NAT/firewall restrictions, configure these Vercel production variables from a TURN provider such as Metered:
+
+```bash
+VITE_TURN_URL=turns:global.relay.metered.ca:443?transport=tcp
+VITE_TURN_USERNAME=...
+VITE_TURN_CREDENTIAL=...
+```
+
+TURN allowance is bandwidth-based, not time-based. Direct peer-to-peer calls generally do not use relay allowance; calls that require a relay consume it. Any variable prefixed `VITE_` is included in the browser build, so use limited-scope TURN credentials and rotate them if exposed.
 
 ## Production
 
