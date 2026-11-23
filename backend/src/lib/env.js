@@ -12,10 +12,13 @@ const NODE_ENV = clean(process.env.NODE_ENV) || "development";
 const IS_PROD = NODE_ENV === "production";
 
 // CLIENT_URL may hold several comma-separated origins (no trailing slashes needed).
-const CLIENT_ORIGINS = (clean(process.env.CLIENT_URL) || "http://www.pinglet.site")
+const configuredOrigins = (clean(process.env.CLIENT_URL) || "http://www.pinglet.site")
   .split(",")
   .map((s) => stripTrailingSlash(s.trim()))
   .filter(Boolean);
+// Capacitor serves the bundled UI from a local WebView origin. These are fixed
+// app origins, not a broad CORS wildcard.
+const CLIENT_ORIGINS = [...new Set([...configuredOrigins, "http://localhost", "https://localhost", "capacitor://localhost"])];
 
 function parseTrustProxy(value) {
   const v = clean(value);

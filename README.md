@@ -63,9 +63,9 @@ TURN allowance is bandwidth-based, not time-based. Direct peer-to-peer calls gen
 
 ## Android APK
 
-Pinglet is packaged as an Android app with Capacitor. The app opens `https://pinglet.site`, so changes deployed to the website are available in the installed app the next time it loads. The Android manifest also requests camera and microphone access only when a user starts a voice or video call.
+Pinglet is packaged as an Android app with Capacitor. Its user interface is bundled inside the APK and opens directly as an app, without loading or redirecting to `pinglet.site`. The app connects securely to `api.pinglet.site` for authentication, messages, presence, and calls. The Android manifest requests camera and microphone access only when a user starts a voice or video call.
 
-Every push to `main` runs the **Build Android APK** GitHub Action. Open the action run on GitHub and download the `Pinglet-debug-<commit>` artifact. It contains an installable debug APK. Android may ask you to allow installs from the browser or file manager used to open it.
+Every push to `main` runs the **Build Android APK** GitHub Action. Open the action run on GitHub and download the `Pinglet-debug-<commit>` artifact. It contains an installable debug APK. Install a newer artifact to update the native app; normal website deployments do not alter an APK already installed on a phone. Android may ask you to allow installs from the browser or file manager used to open it.
 
 To create an APK locally:
 

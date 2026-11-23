@@ -33,11 +33,10 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Install and build web app
+      - name: Build bundled Android app
         run: |
           npm ci
-          npm run build
-          npx cap sync android
+          npm run android:sync
 
       - name: Build installable debug APK
         working-directory: frontend/android
