@@ -74,7 +74,7 @@ function MessageInput() {
   };
 
   return (
-    <div className="shrink-0 bg-pl-header px-2 py-2 md:px-4">
+    <div className="shrink-0 border-t border-pl-line bg-pl-panel px-3 py-3 md:px-5">
       {replyTo && <div className="mb-2 flex items-center gap-2 rounded-lg border-l-4 border-pl-accent bg-pl-selected px-3 py-2 text-sm"><ReplyIcon className="size-4 text-pl-accent" /><span className="min-w-0 flex-1 truncate text-pl-muted">Replying to: {replyTo.text || "Photo"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="text-pl-muted hover:text-pl-text"><XIcon className="size-4" /></button></div>}
       {imagePreview && (
         <div className="mb-2 flex items-center">
@@ -125,7 +125,7 @@ function MessageInput() {
           onChange={(e) => {
             setText(e.target.value);
           }}
-          className="max-h-[120px] min-w-0 flex-1 resize-none rounded-3xl bg-pl-selected px-4 py-[11px] text-[15px] leading-[1.35] text-pl-text placeholder-pl-muted focus:outline-none"
+          className="max-h-[120px] min-w-0 flex-1 resize-none rounded-2xl border border-pl-line bg-pl-header focus:border-pl-blue px-4 py-[11px] text-[15px] leading-[1.35] text-pl-text placeholder-pl-muted focus:outline-none"
           placeholder="Type a message"
         />
 
@@ -133,7 +133,7 @@ function MessageInput() {
           type="submit"
           aria-label="Send message"
           disabled={!canSend}
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-pl-accent text-pl-bg transition-colors hover:bg-[#06cf9c] disabled:bg-pl-selected disabled:text-pl-muted"
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-pl-accent text-pl-bg transition-colors hover:bg-pl-accentDark disabled:bg-pl-selected disabled:text-pl-muted"
         >
           <SendIcon className="size-5" />
         </button>

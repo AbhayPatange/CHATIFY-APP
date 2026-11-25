@@ -44,8 +44,8 @@ function App() {
 
       <Toaster
         toastOptions={{
-          style: { background: "#202c33", color: "#e9edef", fontSize: "14px" },
-          success: { iconTheme: { primary: "#00a884", secondary: "#111b21" } },
+          style: { background: "#332c3d", color: "#fbf6ff", fontSize: "14px" },
+          success: { iconTheme: { primary: "#daf88b", secondary: "#201c27" } },
         }}
       />
     </div>

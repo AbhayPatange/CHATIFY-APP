@@ -44,7 +44,7 @@ function ChatsList() {
   }
 
   return (
-    <ul>
+    <ul className="space-y-1 py-3">
       {visible.map((chat) => {
         const last = chat.lastMessage;
         const count = unread[chat._id] || 0;
@@ -65,7 +65,7 @@ function ChatsList() {
 
               <div className="min-w-0 flex-1 py-3.5 pr-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <h4 className="truncate text-[17px] text-pl-text">{chat.fullName}</h4>
+                  <h4 className="truncate text-base font-semibold text-pl-text">{chat.fullName}</h4>
                   {last && (
                     <time
                       dateTime={last.createdAt}

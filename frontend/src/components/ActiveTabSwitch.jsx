@@ -2,7 +2,7 @@ import { SearchIcon, XIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 
 const TABS = [
-  { id: "chats", label: "All" },
+  { id: "chats", label: "All chats" },
   { id: "unread", label: "Unread" },
   { id: "contacts", label: "Connections" },
 ];
@@ -15,7 +15,7 @@ function ActiveTabSwitch() {
 
   return (
     <div className="shrink-0 space-y-4 border-b border-pl-line px-5 pb-5 pt-2">
-      <div><h1 className="text-2xl font-semibold tracking-tight text-pl-text">Messages</h1><p className="text-xs text-pl-muted">A little closer, every day.</p></div>
+      <h1 className="text-4xl font-bold tracking-[-0.055em] text-pl-text">Inbox</h1>
       <div className="relative">
         <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-pl-muted" />
         <input
@@ -38,17 +38,17 @@ function ActiveTabSwitch() {
         )}
       </div>
 
-      <div className="flex gap-2" role="tablist" aria-label="Chat filters">
+      <div className="flex gap-1 rounded-2xl bg-pl-bg p-1" role="tablist" aria-label="Chat filters">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`rounded-full px-3 py-1 text-sm transition-colors ${
+            className={`min-h-11 flex-1 rounded-xl px-2 text-sm font-semibold transition-colors ${
               activeTab === tab.id
                 ? "bg-pl-accent text-pl-bg"
-                : "bg-pl-header text-pl-muted hover:bg-pl-selected"
+                : "text-pl-muted hover:bg-pl-selected"
             }`}
           >
             {tab.label}

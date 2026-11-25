@@ -50,13 +50,13 @@ function ChatHeader() {
       <button type="button" onClick={() => setProfileUser(selectedUser)} aria-label={`View ${selectedUser.fullName} profile`} className="rounded-full"><Avatar src={selectedUser.profilePic} name={selectedUser.fullName} size="size-11" online={isOnline} /></button>
 
       <div className="min-w-0 flex-1 cursor-pointer" onClick={() => setProfileUser(selectedUser)}>
-        <h3 className="truncate text-base text-pl-text">{selectedUser.fullName}</h3>
+        <h3 className="truncate text-base font-semibold text-pl-text">{selectedUser.fullName}</h3>
         <p className={`text-xs ${isOnline ? "text-pl-accent" : "text-pl-muted"}`}>{isOnline ? "online" : "offline"}</p>
       </div>
 
       <button type="button" onClick={toggleCallHistory} aria-label="Call history" title="Call history" className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><Clock3Icon className="size-5" /></button>
-      <button type="button" onClick={() => requestCall("audio")} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><PhoneIcon className="size-5" /></button>
-      <button type="button" onClick={() => requestCall("video")} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-10 place-items-center rounded-full text-pl-muted hover:bg-pl-selected hover:text-pl-text"><VideoIcon className="size-5" /></button>
+      <button type="button" onClick={() => requestCall("audio")} aria-label="Start voice call" title={isOnline ? "Voice call" : "User is offline"} className="grid size-11 place-items-center rounded-2xl bg-pl-chip text-pl-blue hover:bg-pl-selected"><PhoneIcon className="size-5" /></button>
+      <button type="button" onClick={() => requestCall("video")} aria-label="Start video call" title={isOnline ? "Video call" : "User is offline"} className="grid size-11 place-items-center rounded-2xl bg-pl-chip text-pl-blue hover:bg-pl-selected"><VideoIcon className="size-5" /></button>
 
       <button
         onClick={() => setSelectedUser(null)}

@@ -4,21 +4,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Pinglet palette (dark, WhatsApp-style)
+        // Pinglet palette (plum, lilac and citron)
         pl: {
-          bg: "#0b0e17",
-          panel: "#111622",
-          header: "#171e2c",
-          hover: "#202a3b",
-          selected: "#273449",
-          line: "#263244",
-          out: "#254b59",
-          accent: "#70e0da",
-          accentDark: "#40bcb7",
-          blue: "#9bafff",
-          text: "#eef4f8",
-          muted: "#96a7b8",
-          chip: "#1d2838",
+          bg: "#15121b",
+          panel: "#201c27",
+          header: "#292431",
+          hover: "#332c3d",
+          selected: "#40354d",
+          line: "#44394e",
+          out: "#503968",
+          accent: "#daf88b",
+          accentDark: "#bade70",
+          blue: "#d6b5ff",
+          text: "#fbf6ff",
+          muted: "#beb2c8",
+          chip: "#352c40",
         },
       },
       fontFamily: {
