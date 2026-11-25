@@ -61,7 +61,7 @@ public class MessageAlerts extends Plugin {
     }
     @PluginMethod public void disable(PluginCall call) { MessagePoll.stop(getContext()); call.resolve(); }
     @PluginMethod public void post(PluginCall call) {
-        MessagePoll.show(getContext(),call.getString("owner",""),call.getString("peer",""),call.getString("name","Pinglet"),call.getInt("count",1),call.getString("latest",""));
+        MessagePoll.show(getContext(),call.getString("owner",""),call.getString("peer",""),call.getString("name","Pinglet"),call.getInt("count",1),call.getString("latest",""),call.getString("preview",""));
         call.resolve();
     }
     @PluginMethod public void clear(PluginCall call) { MessagePoll.clear(getContext(),call.getString("peer",""));call.resolve(); }

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { android, alerts, configureAlerts, notificationPreference } from "../lib/alerts";
+import { decryptText } from "../lib/crypto";
 import { axiosInstance, getErrorMessage } from "../lib/axios";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
@@ -57,12 +58,23 @@ export default function AndroidMessageAlerts() {
 
   useEffect(() => {
     if (!android || !socket || !owner) return;
-    function onIncoming(message) {
+    async function onIncoming(message) {
       if (notificationPreference(owner) !== "on") return;
       const chat = useChatStore.getState();
       if (document.visibilityState === "visible" && chat.selectedUser?._id === message.senderId) return;
       const person = chat.chats.find(p => p._id === message.senderId) || chat.allContacts.find(p => p._id === message.senderId);
-      alerts.post({ owner, peer: message.senderId, name: person?.fullName || "Pinglet", latest: message._id,
+      let preview = "New message";
+      const identity = useAuthStore.getState().encryptionIdentity;
+      if (message.encrypted && identity) {
+        try {
+          const content = await decryptText(message, owner, identity);
+          if (message.documentId) preview = "Document";
+          else if (message.photoId) preview = content || "Photo";
+          else preview = content || "New message";
+        } catch { /* Keep the generic notification if the key is unavailable. */ }
+      } else if (message.text) preview = message.text;
+      if (useAuthStore.getState().authUser?._id !== owner) return;
+      alerts.post({ owner, preview,  peer: message.senderId, name: person?.fullName || "Pinglet", latest: message._id,
         count: (chat.unread[message.senderId] || 0) + 1 }).catch(() => {});
     }
     const onRead = ({ partnerId }) => alerts.clear({ peer: partnerId }).catch(() => {});

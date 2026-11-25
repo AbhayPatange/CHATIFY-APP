@@ -49,7 +49,7 @@ public class MessagePoll extends JobService {
         else if (Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
         return PendingIntent.getActivity(c, 0, intent, flags);
     }
-    static synchronized void show(Context c, String owner, String peer, String name, int count, String latest) {
+    static synchronized void show(Context c, String owner, String peer, String name, int count, String latest, String preview) {
         SharedPreferences p = prefs(c);
         if (!owner.equals(p.getString("owner", "")) || !permitted(c) || !peer.matches("[a-f0-9]{24}") || latest.equals(p.getString("last-"+peer, ""))) return;
         channel(c);
@@ -59,7 +59,8 @@ public class MessagePoll extends JobService {
         NotificationCompat.Action read = new NotificationCompat.Action.Builder(0, "Mark as read", action(c, owner, peer, "read"))
             .setAuthenticationRequired(true).build();
         c.getSystemService(NotificationManager.class).notify(peer, 1, new NotificationCompat.Builder(c, CHANNEL)
-            .setSmallIcon(android.R.drawable.stat_notify_chat).setContentTitle(name).setContentText(count == 1 ? "New message" : count + " unread messages")
+            .setSmallIcon(android.R.drawable.stat_notify_chat).setContentTitle(name).setContentText(preview.isEmpty() ? (count == 1 ? "New message" : count + " unread messages") : preview)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(preview.isEmpty() ? "Open Pinglet to read your messages" : preview))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setPriority(NotificationCompat.PRIORITY_HIGH).setNumber(count).setAutoCancel(true)
             .setContentIntent(action(c, owner, peer, "open")).addAction(reply).addAction(read).build());
@@ -94,7 +95,7 @@ public class MessagePoll extends JobService {
                 for (int i=0;i<chats.length();i++) {
                     JSONObject chat=chats.getJSONObject(i); String peer=chat.getString("id");
                     old.remove("last-"+peer);
-                    show(this, owner, peer, chat.getString("name"), chat.getInt("count"), chat.getString("latest"));
+                    show(this, owner, peer, chat.getString("name"), chat.getInt("count"), chat.getString("latest"), "");
                 }
                 for (String key:old) if (key.startsWith("last-") && owner.equals(prefs(this).getString("owner",""))) clear(this,key.substring(5));
             } catch (Exception ignored) { /* The next scheduled check retries. */ }
