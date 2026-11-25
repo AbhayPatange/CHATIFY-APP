@@ -29,6 +29,14 @@ body {
   outline-offset: 2px;
 }
 
+button, a, input, textarea { -webkit-tap-highlight-color: transparent; }
+button, a { touch-action: manipulation; }
+button:not(:disabled) { transition: transform 160ms ease, background-color 160ms ease, opacity 160ms ease; }
+button:not(:disabled):active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
 /* chat wallpaper: dark background with a faint repeating doodle */
 .chat-wallpaper {
   background-color: #0d1320;

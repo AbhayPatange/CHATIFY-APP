@@ -11,6 +11,7 @@ import NoConversationPlaceholder from "../components/NoConversationPlaceholder";
 import CallOverlay from "../components/CallOverlay";
 import CallHistoryPanel from "../components/CallHistoryPanel";
 import UserProfilePanel from "../components/UserProfilePanel";
+import AndroidBackHandler from "../components/AndroidBackHandler";
 
 function ChatPage() {
   const activeTab = useChatStore((s) => s.activeTab);
@@ -54,6 +55,7 @@ function ChatPage() {
 
   return (
     <div style={viewport || undefined} className="fixed inset-x-0 top-0 mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden border border-pl-line bg-pl-panel shadow-2xl md:relative xl:my-5 xl:h-[calc(100dvh-2.5rem)] xl:rounded-[28px]">
+      <AndroidBackHandler />
       {/* LEFT: on phones it is hidden while a conversation is open */}
       <aside
         className={`${
