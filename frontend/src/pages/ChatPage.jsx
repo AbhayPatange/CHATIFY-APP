@@ -19,6 +19,11 @@ function ChatPage() {
   const subscribeToMessages = useChatStore((s) => s.subscribeToMessages);
   const unsubscribeFromMessages = useChatStore((s) => s.unsubscribeFromMessages);
   const socket = useAuthStore((s) => s.socket);
+  const setActiveTab = useChatStore((s) => s.setActiveTab);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("pingletInvite")) setActiveTab("contacts");
+  }, [setActiveTab]);
 
   // One page-level subscription: messages from *any* user are handled, not only the open chat.
   useEffect(() => {

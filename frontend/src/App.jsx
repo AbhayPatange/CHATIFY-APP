@@ -9,6 +9,17 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import { useAuthStore } from "./store/useAuthStore";
 import PageLoader from "./components/PageLoader";
 
+function captureInvite() {
+    const url = new URL(window.location.href);
+    const invite = url.searchParams.get("connect");
+    if (invite && /^(?:[A-Z0-9]{7}|P-[A-F0-9]{14})$/i.test(invite)) {
+      sessionStorage.setItem("pingletInvite", invite.toUpperCase());
+      url.searchParams.delete("connect");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    }
+}
+captureInvite();
+
 function App() {
   const checkAuth = useAuthStore((s) => s.checkAuth);
   const isCheckingAuth = useAuthStore((s) => s.isCheckingAuth);

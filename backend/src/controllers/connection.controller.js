@@ -2,7 +2,7 @@ import crypto from "crypto";
 import Connection from "../models/Connection.js";
 import User from "../models/User.js";
 import { emitToUser } from "../lib/socket.js";
-import { isObjectId, isString } from "../lib/validators.js";
+import { isObjectId } from "../lib/validators.js";
 
 const userFields = "fullName profilePic encryptionPublicKey connectionCode";
 const isBlocked = async (me, otherId) =>
@@ -47,6 +47,7 @@ export const getConnections = async (req, res, next) => {
       .lean();
     const result = { code: myCode, connected: [], incoming: [], outgoing: [] };
     for (const row of rows) {
+      if (!row.requester || !row.recipient) continue;
       const iRequested = String(row.requester._id) === String(req.user._id);
       const other = iRequested ? row.recipient : row.requester;
       if (!other || await isBlocked(req.user, other._id)) continue;
