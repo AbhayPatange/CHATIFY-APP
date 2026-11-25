@@ -37,7 +37,7 @@ function ChatHeader() {
   }, [setSelectedUser]);
 
   return <>
-    <header className="flex h-[72px] shrink-0 items-center gap-2 border-b border-pl-line bg-pl-header/90 px-2 shadow-sm md:px-5">
+    <header className="relative z-10 flex h-[72px] shrink-0 items-center gap-2 border-b border-pl-line bg-pl-header/90 px-2 shadow-sm md:px-5">
       {/* back arrow on phones, where the chat list is hidden while a chat is open */}
       <button
         onClick={() => setSelectedUser(null)}

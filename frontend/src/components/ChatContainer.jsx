@@ -21,6 +21,7 @@ function ChatContainer() {
   const setReplyTo = useChatStore((s) => s.setReplyTo);
   const authUser = useAuthStore((s) => s.authUser);
   const messageEndRef = useRef(null);
+  const messageListRef = useRef(null);
   const prevLastId = useRef(undefined);
   const swipeStart = useRef({});
   const [swipe, setSwipe] = useState({ id: null, offset: 0 });
@@ -54,7 +55,8 @@ function ChatContainer() {
   useEffect(() => {
     if (!lastMessageId) return;
     const first = prevLastId.current === undefined;
-    messageEndRef.current?.scrollIntoView({ behavior: first ? "auto" : "smooth" });
+    const list = messageListRef.current;
+    if (list) list.scrollTo({ top: list.scrollHeight, behavior: first ? "auto" : "smooth" });
     prevLastId.current = lastMessageId;
   }, [lastMessageId]);
 
@@ -64,7 +66,7 @@ function ChatContainer() {
     <>
       <ChatHeader />
 
-      <div className="chat-wallpaper flex-1 overflow-y-auto px-3 py-3 md:px-[6%]">
+      <div ref={messageListRef} className="chat-wallpaper min-h-0 flex-1 overflow-y-auto px-3 py-3 md:px-[6%]">
         {showMessages ? (
           <div className="mx-auto flex max-w-4xl flex-col">
             {hasMoreMessages && (
@@ -108,8 +110,9 @@ function ChatContainer() {
                     </div>
                   )}
 
-                  <div className={`relative flex ${mine ? "justify-end" : "justify-start"} ${startsRun ? "mt-2" : "mt-0.5"}`}>
-                    {swipe.id === msg._id && <ReplyIcon className="absolute left-3 top-1/2 size-5 -translate-y-1/2 text-pl-accent" style={{ opacity: Math.min(swipe.offset / 48, 1) }} />}
+                  <div className={`group relative flex items-center gap-2 ${mine ? "justify-end" : "justify-start"} ${startsRun ? "mt-2" : "mt-0.5"}`}>
+                    {swipe.id === msg._id && <ReplyIcon className={`absolute top-1/2 size-5 -translate-y-1/2 text-pl-accent ${mine ? "right-3" : "left-3"}`} style={{ opacity: Math.min(Math.abs(swipe.offset) / 48, 1) }} />}
+                    {mine && !msg.isOptimistic && <button type="button" onClick={() => setReplyTo(msg)} aria-label="Reply to your message" className="hidden rounded-full p-2 text-pl-muted hover:bg-pl-selected hover:text-pl-text focus:opacity-100 md:block md:opacity-0 md:group-hover:opacity-100"><ReplyIcon className="size-4" /></button>}
                     <div
                       onTouchStart={(event) => {
                         const touch = event.touches[0];
@@ -123,11 +126,14 @@ function ChatContainer() {
                         const distance = touch.clientX - start.x;
                         const vertical = Math.abs(touch.clientY - start.y);
                         if (vertical > Math.abs(distance)) return;
-                        setSwipe({ id: msg._id, offset: Math.max(0, Math.min(distance, 88)) });
+                        setSwipe({ id: msg._id, offset: mine ? Math.max(-88, Math.min(0, distance)) : Math.max(0, Math.min(distance, 88)) });
                       }}
                       onTouchEnd={(event) => {
                         const start = swipeStart.current[msg._id];
-                        if (start && event.changedTouches[0]?.clientX - start.x > 64) setReplyTo(msg);
+                        const touch = event.changedTouches[0];
+                        const distance = touch && start ? touch.clientX - start.x : 0;
+                        const vertical = touch && start ? Math.abs(touch.clientY - start.y) : 0;
+                        if (!msg.isOptimistic && vertical < Math.abs(distance) && (mine ? distance < -64 : distance > 64)) setReplyTo(msg);
                         delete swipeStart.current[msg._id];
                         setSwipe({ id: null, offset: 0 });
                       }}
@@ -161,6 +167,7 @@ function ChatContainer() {
                         <span className={`absolute bottom-1 ${msg.image ? "right-2.5" : "right-2"}`}>{meta}</span>
                       )}
                     </div>
+                    {!mine && !msg.isOptimistic && <button type="button" onClick={() => setReplyTo(msg)} aria-label="Reply to message" className="hidden rounded-full p-2 text-pl-muted hover:bg-pl-selected hover:text-pl-text focus:opacity-100 md:block md:opacity-0 md:group-hover:opacity-100"><ReplyIcon className="size-4" /></button>}
                   </div>
                 </div>
               );

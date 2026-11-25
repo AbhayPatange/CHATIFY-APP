@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -20,6 +20,18 @@ function ChatPage() {
   const unsubscribeFromMessages = useChatStore((s) => s.unsubscribeFromMessages);
   const socket = useAuthStore((s) => s.socket);
   const setActiveTab = useChatStore((s) => s.setActiveTab);
+  const [viewport, setViewport] = useState(null);
+
+  useEffect(() => {
+    const view = window.visualViewport;
+    if (!view) return;
+    const update = () => setViewport(window.innerWidth < 768 ? { height: `${view.height}px`, top: `${view.offsetTop}px` } : null);
+    update();
+    view.addEventListener("resize", update);
+    view.addEventListener("scroll", update);
+    window.addEventListener("resize", update);
+    return () => { view.removeEventListener("resize", update); view.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, []);
 
   useEffect(() => {
     if (sessionStorage.getItem("pingletInvite")) setActiveTab("contacts");
@@ -41,7 +53,7 @@ function ChatPage() {
   }, [totalUnread]);
 
   return (
-    <div className="mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden border border-pl-line bg-pl-panel shadow-2xl xl:my-5 xl:h-[calc(100dvh-2.5rem)] xl:rounded-[28px]">
+    <div style={viewport || undefined} className="fixed inset-x-0 top-0 mx-auto flex h-dvh w-full max-w-[1680px] overflow-hidden border border-pl-line bg-pl-panel shadow-2xl md:relative xl:my-5 xl:h-[calc(100dvh-2.5rem)] xl:rounded-[28px]">
       {/* LEFT: on phones it is hidden while a conversation is open */}
       <aside
         className={`${
@@ -56,7 +68,7 @@ function ChatPage() {
       </aside>
 
       {/* RIGHT */}
-      <section className={`${selectedUser ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col bg-pl-bg`}>
+      <section className={`${selectedUser ? "flex" : "hidden md:flex"} min-h-0 min-w-0 flex-1 flex-col bg-pl-bg`}>
         {selectedUser ? <ChatContainer /> : <NoConversationPlaceholder />}
       </section>
       <CallOverlay />
