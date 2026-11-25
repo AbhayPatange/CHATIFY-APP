@@ -15,6 +15,13 @@ function MessageInput() {
 
   const [file, setFile] = useState(null);
   const documentInput = useRef(null);
+  const notificationDraft = useChatStore(s => s.notificationDraft);
+  const peer = useChatStore(s => s.selectedUser?._id);
+  useEffect(() => {
+    if (!peer || notificationDraft?.peer !== peer) return;
+    setText(previous => previous ? previous + "\n" + notificationDraft.text : notificationDraft.text);
+    useChatStore.setState({ notificationDraft: null });
+  }, [peer, notificationDraft]);
   const photoId = useRef(null);
   const fileInputRef = useRef(null);
   const [cameraOpen, setCameraOpen] = useState(false);

@@ -15,6 +15,7 @@ const RANK = { pending: 0, sent: 1, delivered: 2, seen: 3 };
 const rank = (status) => RANK[status] ?? RANK.seen; // messages from before ticks existed count as seen
 
 const initialState = {
+  notificationDraft: null,
   allContacts: [],
   connectionInfo: { code: "", connected: [], incoming: [], outgoing: [] },
   chats: [], // each: user + { lastMessage, unreadCount }

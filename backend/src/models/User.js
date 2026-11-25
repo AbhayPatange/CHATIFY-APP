@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false, // never returned unless explicitly requested with .select("+password")
     },
+    emailChange: { type: mongoose.Schema.Types.Mixed, select: false },
     profilePic: {
       type: String,
       default: "",

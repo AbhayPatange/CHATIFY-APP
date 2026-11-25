@@ -9,6 +9,8 @@ public class MainActivity extends BridgeActivity {
     private long lastBackPress;
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        getSystemService(android.app.job.JobScheduler.class).cancel(MessagePoll.JOB);
+        registerPlugin(MessageAlerts.class);
         registerPlugin(DocumentSaver.class);
         super.onCreate(savedInstanceState);
         CookieManager cookies = CookieManager.getInstance();
