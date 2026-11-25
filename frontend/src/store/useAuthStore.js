@@ -4,6 +4,7 @@ import { io } from "socket.io-client";
 import { axiosInstance, getErrorMessage, setUnauthorizedHandler, SOCKET_URL } from "../lib/axios";
 import { useChatStore } from "./useChatStore";
 import { createEncryptionIdentity, unlockEncryptionIdentity } from "../lib/crypto";
+import { clearDeviceIdentity, loadDeviceIdentity, saveDeviceIdentity } from "../lib/deviceSession";
 
 export const useAuthStore = create((set, get) => ({
   authUser: null,
@@ -18,10 +19,13 @@ export const useAuthStore = create((set, get) => ({
 
   checkAuth: async () => {
     try {
-      await axiosInstance.get("/auth/check");
-      // Private keys are unlocked only with the password entered at login.
-      // A remembered cookie alone must never silently unlock chat history.
-      set({ authUser: null, encryptionIdentity: null });
+      const { data: user } = await axiosInstance.get("/auth/check");
+      let identity = null;
+      try { identity = await loadDeviceIdentity(user); } catch { /* storage unavailable: sign in again */ }
+      if (!identity) { set({ authUser: null, encryptionIdentity: null }); return; }
+      set({ authUser: user, encryptionIdentity: identity });
+      get().loadBlockedUsers();
+      get().connectSocket();
     } catch (error) {
       set({ authUser: null });
       if (error.response?.status !== 401) console.error("Error in checkAuth:", error);
@@ -35,6 +39,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const { identity, payload } = await createEncryptionIdentity(data.password);
       const res = await axiosInstance.post("/auth/signup", { ...data, ...payload });
+      try { await saveDeviceIdentity(res.data, identity); } catch { /* device storage unavailable */ }
       set({ authUser: res.data, encryptionIdentity: identity });
       get().loadBlockedUsers();
       toast.success("Account created successfully!");
@@ -58,6 +63,7 @@ export const useAuthStore = create((set, get) => ({
         res = await axiosInstance.put("/auth/encryption-key", created.payload);
         identity = created.identity;
       }
+      try { await saveDeviceIdentity(res.data, identity); } catch { /* device storage unavailable */ }
       set({ authUser: res.data, encryptionIdentity: identity });
       get().loadBlockedUsers();
       toast.success("Logged in successfully");
@@ -71,6 +77,7 @@ export const useAuthStore = create((set, get) => ({
 
   // Clears everything tied to the signed-in user so the next user never sees stale data.
   clearSession: () => {
+    clearDeviceIdentity().catch(() => {});
     get().disconnectSocket();
     useChatStore.getState().reset();
     set({ authUser: null, encryptionIdentity: null, blockedUsers: [] });
