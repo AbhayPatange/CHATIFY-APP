@@ -1,5 +1,8 @@
 {
   "appId": "com.abhay.pinglet",
   "appName": "Pinglet",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
 }

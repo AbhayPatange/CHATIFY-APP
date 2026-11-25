@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import toast from "react-hot-toast";
 import { io } from "socket.io-client";
+import { Capacitor } from "@capacitor/core";
 import { axiosInstance, getErrorMessage, setUnauthorizedHandler, SOCKET_URL } from "../lib/axios";
 import { useChatStore } from "./useChatStore";
 import { createEncryptionIdentity, unlockEncryptionIdentity } from "../lib/crypto";
@@ -148,7 +149,7 @@ export const useAuthStore = create((set, get) => ({
     // hard-coded host broke preview/custom-domain deployments and bypassed
     // VITE_SOCKET_URL entirely.
     const socket = io(SOCKET_URL, {
-      transports: ["websocket", "polling"],
+      transports: Capacitor.isNativePlatform() ? ["polling"] : ["websocket", "polling"],
       // The API is on api.pinglet.site while the app runs on www.pinglet.site.
       // Socket.IO does not include cross-origin cookies unless this is explicit,
       // so without it the server rejects signaling as unauthenticated.
