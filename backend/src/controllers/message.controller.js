@@ -1,4 +1,4 @@
-import { emitToUser, isUserOnline } from "../lib/socket.js";
+import { deliverPhoto, emitToUser, isUserOnline } from "../lib/socket.js";
 import { isObjectId, isString } from "../lib/validators.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
 import User from "../models/User.js";
@@ -75,7 +75,7 @@ export const sendMessage = async (req, res, next) => {
   try {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
-    const { encrypted, replyTo } = req.body ?? {};
+    const { encrypted, replyTo, photo } = req.body ?? {};
 
     if (!isObjectId(receiverId)) return res.status(400).json({ message: "Invalid user id." });
     if (!isEncryptedMessage(encrypted)) return res.status(400).json({ message: "An encrypted text message is required." });
@@ -92,10 +92,19 @@ export const sendMessage = async (req, res, next) => {
     // receiver has the app open on some device -> straight to "delivered" (two ticks)
     const delivered = isUserOnline(receiverId);
 
+    if (photo !== undefined) {
+      if (!photo || typeof photo.id !== "string" || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(photo.id) || !isEncryptedMessage(photo.encrypted, 1_000_000)) {
+        return res.status(400).json({ message: "Invalid encrypted photo." });
+      }
+      const received = await deliverPhoto(receiverId, { id: photo.id, senderId: String(senderId), encrypted: photo.encrypted });
+      if (!received) return res.status(409).json({ message: "Ask your contact to open the updated Pinglet app, then send the photo again." });
+    }
+
     const newMessage = await Message.create({
       senderId,
       receiverId,
       encrypted,
+      photoId: photo?.id,
       replyTo: replyTo ? { messageId: String(replyTo.messageId), senderId: String(replyTo.senderId) } : undefined,
       status: delivered ? MESSAGE_STATUS.DELIVERED : MESSAGE_STATUS.SENT,
       deliveredAt: delivered ? new Date() : undefined,
@@ -109,10 +118,10 @@ export const sendMessage = async (req, res, next) => {
     next(error);
   }
 
-function isEncryptedMessage(value) {
+function isEncryptedMessage(value, ciphertextLimit = 20_000) {
   if (!value || typeof value !== "object" || Array.isArray(value) || value.version !== 1) return false;
   const fields = ["ciphertext", "iv", "senderKey", "receiverKey"];
-  return fields.every((field) => isString(value[field]) && value[field].length > 8 && value[field].length < 20_000);
+  return Object.keys(value).length === fields.length + 1 && fields.every((field) => isString(value[field]) && value[field].length > 8 && value[field].length < (field === "ciphertext" ? ciphertextLimit : 20_000));
 }
 };
 
@@ -217,7 +226,7 @@ export const getChatPartners = async (req, res, next) => {
             senderId: m.senderId,
             text: m.text,
             encrypted: m.encrypted ? { version: m.encrypted.version } : undefined,
-            hasImage: Boolean(m.image),
+            hasImage: Boolean(m.image || m.photoId),
             status: m.status || MESSAGE_STATUS.SEEN, // pre-tick messages
             createdAt: m.createdAt,
           },

@@ -4,6 +4,9 @@ import { axiosInstance, getErrorMessage } from "../lib/axios";
 import { readBool, writeBool } from "../lib/storage";
 import { useAuthStore } from "./useAuthStore";
 import { decryptText, encryptText } from "../lib/crypto";
+import { encryptionKeyFingerprint } from "../lib/keyFingerprint";
+
+import { loadPhoto, savePhoto } from "../lib/photos";
 
 export const PAGE_SIZE = 50;
 
@@ -40,7 +43,7 @@ const playNotification = () => {
 const toPreview = (m) => ({
   _id: m._id,
   senderId: m.senderId,
-  text: m.text || (m.encrypted ? "Encrypted message" : ""),
+  text: m.text || (m.image ? "Photo" : m.encrypted ? "Encrypted message" : ""),
   hasImage: Boolean(m.image),
   status: m.status || "sent",
   createdAt: m.createdAt,
@@ -163,12 +166,14 @@ export const useChatStore = create((set, get) => ({
     const { selectedUser, replyTo } = get();
     const { authUser, encryptionIdentity } = useAuthStore.getState();
     if (!selectedUser || !authUser) return false;
-    if (messageData.image) {
-      toast.error("Encrypted photo sharing is not available yet.");
-      return false;
-    }
     if (!selectedUser.encryptionPublicKey || !encryptionIdentity) {
       toast.error("Encrypted chat is not available for this contact yet.");
+      return false;
+    }
+
+    const fingerprint = await encryptionKeyFingerprint(selectedUser.encryptionPublicKey);
+    if (localStorage.getItem(`pinglet-key:${authUser._id}:${selectedUser._id}`) !== fingerprint) {
+      toast.error("Verify this contact's security code in their profile before sending.");
       return false;
     }
 
@@ -191,12 +196,18 @@ export const useChatStore = create((set, get) => ({
     bumpChat(receiverId, optimistic);
 
     try {
-      const encrypted = await encryptText(messageData.text, selectedUser.encryptionPublicKey, encryptionIdentity);
-      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted, replyTo: optimistic.replyTo });
+      const encrypted = await encryptText(messageData.text || "", selectedUser.encryptionPublicKey, encryptionIdentity);
+      let photo;
+      if (messageData.image) {
+        photo = { id: messageData.photoId, encrypted: await encryptText(messageData.image, selectedUser.encryptionPublicKey, encryptionIdentity) };
+        await savePhoto(authUser._id, authUser._id, photo.id, photo.encrypted);
+      }
+      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted, photo, replyTo: optimistic.replyTo });
+      if (photo && res.data.photoId !== photo.id) throw new Error("The photo service is updating. Try again shortly.");
       // a "seen" event can beat the HTTP response: keep whichever status is further along
       const early = earlyStatus.get(res.data._id);
       earlyStatus.delete(res.data._id);
-      const savedMessage = { ...res.data, text: messageData.text };
+      const savedMessage = { ...res.data, text: messageData.text, image: messageData.image };
       const saved = early && rank(early) > rank(res.data.status) ? { ...savedMessage, status: early } : savedMessage;
 
       // functional updates + id matching: never overwrite messages that arrived in the meantime
@@ -249,6 +260,7 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     unsubscribeFromSocket(socket);
+    socket.on("photo:receive", receivePhoto);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesDelivered", handleDelivered);
     socket.on("messagesSeen", handleSeen);
@@ -273,6 +285,7 @@ let markingSeen = false;
 const earlyStatus = new Map();
 
 function unsubscribeFromSocket(socket) {
+  socket.off("photo:receive", receivePhoto);
   socket.off("newMessage", handleNewMessage);
   socket.off("messagesDelivered", handleDelivered);
   socket.off("messagesSeen", handleSeen);
@@ -370,6 +383,17 @@ async function handleNewMessage(message) {
   if (state.isSoundEnabled) playNotification();
 }
 
+async function receivePhoto(photo, acknowledge) {
+  const owner = useAuthStore.getState().authUser?._id;
+  try {
+    if (!owner) return acknowledge(false);
+    await savePhoto(owner, photo.senderId, photo.id, photo.encrypted);
+    acknowledge(true);
+  } catch {
+    acknowledge(false);
+  }
+}
+
 async function decryptMessages(messages) {
   const { authUser, encryptionIdentity } = useAuthStore.getState();
   return Promise.all(
@@ -377,7 +401,10 @@ async function decryptMessages(messages) {
       if (!message.encrypted) return message;
       if (!authUser || !encryptionIdentity) return { ...message, text: "Encrypted message" };
       try {
-        return { ...message, text: await decryptText(message, authUser._id, encryptionIdentity) };
+        const text = await decryptText(message, authUser._id, encryptionIdentity);
+        if (!message.photoId) return { ...message, text };
+        const image = await loadPhoto(message, authUser._id, encryptionIdentity).catch(() => null);
+        return { ...message, image, text: image ? text : [text, "Photo unavailable on this device"].filter(Boolean).join("\n") };
       } catch {
         return { ...message, text: "Unable to decrypt message", decryptFailed: true };
       }

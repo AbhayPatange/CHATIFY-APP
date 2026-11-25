@@ -181,7 +181,7 @@ function ChatContainer() {
         )}
       </div>
 
-      <MessageInput />
+      <MessageInput key={selectedUserId} />
     </>
   );
 }
