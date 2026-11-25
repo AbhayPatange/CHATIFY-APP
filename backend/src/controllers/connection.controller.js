@@ -10,22 +10,22 @@ const isBlocked = async (me, otherId) =>
   Boolean(await User.exists({ _id: otherId, blockedUsers: me._id }));
 
 async function ensureConnectionCode(user) {
-  if (user.connectionCode) return user.connectionCode;
+  if (user.shortConnectionCode) return user.shortConnectionCode;
   // A randomly generated, unguessable code means users cannot enumerate accounts.
   for (let attempts = 0; attempts < 5; attempts += 1) {
-    const code = `P-${crypto.randomBytes(7).toString("hex").toUpperCase()}`;
+    const code = crypto.randomBytes(5).toString("base64url").toUpperCase().replace(/[-_]/g, "A");
     try {
       const saved = await User.findOneAndUpdate(
-        { _id: user._id, connectionCode: { $in: [null, ""] } },
-        { $set: { connectionCode: code } },
+        { _id: user._id, shortConnectionCode: { $in: [null, ""] } },
+        { $set: { shortConnectionCode: code } },
         { new: true }
-      ).select("connectionCode");
-      if (saved?.connectionCode) return saved.connectionCode;
+      ).select("+shortConnectionCode");
+      if (saved?.shortConnectionCode) return saved.shortConnectionCode;
     } catch (error) {
       if (error?.code !== 11000) throw error;
     }
-    const existing = await User.findById(user._id).select("connectionCode").lean();
-    if (existing?.connectionCode) return existing.connectionCode;
+    const existing = await User.findById(user._id).select("+shortConnectionCode").lean();
+    if (existing?.shortConnectionCode) return existing.shortConnectionCode;
   }
   throw new Error("Could not create a connection code.");
 }
@@ -61,8 +61,8 @@ export const getConnections = async (req, res, next) => {
 export const requestConnection = async (req, res, next) => {
   try {
     const code = String(req.body?.code || "").trim().toUpperCase();
-    if (!/^P-[A-F0-9]{14}$/.test(code)) return res.status(400).json({ message: "Enter a valid connection code." });
-    const target = await User.findOne({ connectionCode: code }).select(userFields);
+    if (!/^(?:[A-Z0-9]{7}|P-[A-F0-9]{14})$/.test(code)) return res.status(400).json({ message: "Enter a valid connection code." });
+    const target = await User.findOne({ $or: [{ shortConnectionCode: code }, { connectionCode: code }] }).select(userFields);
     if (!target) return res.status(404).json({ message: "No user was found for that connection code." });
     if (String(target._id) === String(req.user._id)) return res.status(400).json({ message: "That is your own connection code." });
     if (await isBlocked(req.user, target._id)) return res.status(403).json({ message: "This connection is unavailable." });

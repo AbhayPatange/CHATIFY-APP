@@ -44,7 +44,7 @@ function ContactList() {
       <section>
         <p className="mb-2 text-sm font-medium text-pl-text">Connect with someone</p>
         <form onSubmit={async (event) => { event.preventDefault(); if (await requestConnection(code)) setCode(""); }} className="flex gap-2">
-          <input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="P-XXXXXXXXXXXXXX" className="min-w-0 flex-1 rounded-xl border border-pl-line bg-pl-header px-3 py-2.5 text-sm text-pl-text uppercase outline-none focus:ring-1 focus:ring-pl-accent" />
+          <input value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="Enter their 7-character code" aria-label="Their connection code" className="min-w-0 flex-1 rounded-xl border border-pl-line bg-pl-header px-3 py-2.5 text-sm text-pl-text uppercase outline-none focus:ring-1 focus:ring-pl-accent" />
           <button type="submit" disabled={!code} className="rounded-xl bg-pl-accent px-3 text-pl-bg disabled:opacity-50" aria-label="Send connection request"><UserPlusIcon className="size-4" /></button>
         </form>
       </section>

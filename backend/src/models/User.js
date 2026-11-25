@@ -28,6 +28,7 @@ const userSchema = new mongoose.Schema(
     },
     // Shared deliberately with someone outside the app; it is never listed or searchable.
     connectionCode: { type: String, unique: true, sparse: true, select: false },
+    shortConnectionCode: { type: String, unique: true, sparse: true, select: false },
     // Public key is intentionally visible to contacts. The matching private
     // key is encrypted in the browser with the user's password before it ever
     // reaches this database.
