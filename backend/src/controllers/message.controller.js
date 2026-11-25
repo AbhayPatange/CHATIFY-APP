@@ -1,4 +1,4 @@
-import { deliverPhoto, emitToUser, isUserOnline } from "../lib/socket.js";
+import { deliverAttachment, emitToUser, isUserOnline } from "../lib/socket.js";
 import { isObjectId, isString } from "../lib/validators.js";
 import Message, { MESSAGE_STATUS } from "../models/Message.js";
 import User from "../models/User.js";
@@ -75,7 +75,7 @@ export const sendMessage = async (req, res, next) => {
   try {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
-    const { encrypted, replyTo, photo } = req.body ?? {};
+    const { encrypted, replyTo, photo, document: file } = req.body ?? {};
 
     if (!isObjectId(receiverId)) return res.status(400).json({ message: "Invalid user id." });
     if (!isEncryptedMessage(encrypted)) return res.status(400).json({ message: "An encrypted text message is required." });
@@ -92,12 +92,14 @@ export const sendMessage = async (req, res, next) => {
     // receiver has the app open on some device -> straight to "delivered" (two ticks)
     const delivered = isUserOnline(receiverId);
 
-    if (photo !== undefined) {
-      if (!photo || typeof photo.id !== "string" || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(photo.id) || !isEncryptedMessage(photo.encrypted, 1_000_000)) {
-        return res.status(400).json({ message: "Invalid encrypted photo." });
+    const attachment = file ?? photo;
+    if (file !== undefined && photo !== undefined) return res.status(400).json({ message: "Send one attachment at a time." });
+    if (attachment !== undefined) {
+      if (!attachment || typeof attachment.id !== "string" || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(attachment.id) || !isEncryptedMessage(attachment.encrypted, file ? 3_740_000 : 1_000_000)) {
+        return res.status(400).json({ message: "Invalid encrypted attachment." });
       }
-      const received = await deliverPhoto(receiverId, { id: photo.id, senderId: String(senderId), encrypted: photo.encrypted });
-      if (!received) return res.status(409).json({ message: "Ask your contact to open the updated Pinglet app, then send the photo again." });
+      const received = await deliverAttachment(receiverId, { id: attachment.id, senderId: String(senderId), encrypted: attachment.encrypted }, file ? "document:receive" : "photo:receive");
+      if (!received) return res.status(409).json({ message: "Ask your contact to open the updated Pinglet app, then send the attachment again." });
     }
 
     const newMessage = await Message.create({
@@ -105,6 +107,7 @@ export const sendMessage = async (req, res, next) => {
       receiverId,
       encrypted,
       photoId: photo?.id,
+      documentId: file?.id,
       replyTo: replyTo ? { messageId: String(replyTo.messageId), senderId: String(replyTo.senderId) } : undefined,
       status: delivered ? MESSAGE_STATUS.DELIVERED : MESSAGE_STATUS.SENT,
       deliveredAt: delivered ? new Date() : undefined,
@@ -227,6 +230,7 @@ export const getChatPartners = async (req, res, next) => {
             text: m.text,
             encrypted: m.encrypted ? { version: m.encrypted.version } : undefined,
             hasImage: Boolean(m.image || m.photoId),
+            hasDocument: Boolean(m.documentId),
             status: m.status || MESSAGE_STATUS.SEEN, // pre-tick messages
             createdAt: m.createdAt,
           },

@@ -43,8 +43,9 @@ const playNotification = () => {
 const toPreview = (m) => ({
   _id: m._id,
   senderId: m.senderId,
-  text: m.text || (m.image ? "Photo" : m.encrypted ? "Encrypted message" : ""),
+  text: m.text || (m.file ? m.file.name : m.image ? "Photo" : m.encrypted ? "Encrypted message" : ""),
   hasImage: Boolean(m.image),
+  hasDocument: Boolean(m.file),
   status: m.status || "sent",
   createdAt: m.createdAt,
 });
@@ -187,6 +188,8 @@ export const useChatStore = create((set, get) => ({
       receiverId,
       text: messageData.text,
       image: messageData.image,
+      file: messageData.file,
+      documentId: messageData.file ? messageData.photoId : undefined,
       replyTo: replyTo ? { messageId: replyTo._id, senderId: replyTo.senderId } : undefined,
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -196,18 +199,20 @@ export const useChatStore = create((set, get) => ({
     bumpChat(receiverId, optimistic);
 
     try {
-      const encrypted = await encryptText(messageData.text || "", selectedUser.encryptionPublicKey, encryptionIdentity);
-      let photo;
-      if (messageData.image) {
-        photo = { id: messageData.photoId, encrypted: await encryptText(messageData.image, selectedUser.encryptionPublicKey, encryptionIdentity) };
-        await savePhoto(authUser._id, authUser._id, photo.id, photo.encrypted);
+      const { file } = messageData;
+      const content = file ? JSON.stringify({ name: file.name, size: file.size, caption: messageData.text }) : messageData.text || "";
+      const encrypted = await encryptText(content, selectedUser.encryptionPublicKey, encryptionIdentity);
+      let attachment;
+      if (messageData.image || file) {
+        attachment = { id: messageData.photoId, encrypted: await encryptText(file ? file.bytes : messageData.image, selectedUser.encryptionPublicKey, encryptionIdentity) };
+        await savePhoto(authUser._id, authUser._id, attachment.id, attachment.encrypted);
       }
-      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted, photo, replyTo: optimistic.replyTo });
-      if (photo && res.data.photoId !== photo.id) throw new Error("The photo service is updating. Try again shortly.");
+      const res = await axiosInstance.post(`/messages/send/${receiverId}`, { encrypted, [file ? "document" : "photo"]: attachment, replyTo: optimistic.replyTo });
+      if (attachment && res.data[file ? "documentId" : "photoId"] !== attachment.id) throw new Error("The attachment service is updating. Try again shortly.");
       // a "seen" event can beat the HTTP response: keep whichever status is further along
       const early = earlyStatus.get(res.data._id);
       earlyStatus.delete(res.data._id);
-      const savedMessage = { ...res.data, text: messageData.text, image: messageData.image };
+      const savedMessage = { ...res.data, text: messageData.text, image: messageData.image, file: file && { name: file.name, size: file.size } };
       const saved = early && rank(early) > rank(res.data.status) ? { ...savedMessage, status: early } : savedMessage;
 
       // functional updates + id matching: never overwrite messages that arrived in the meantime
@@ -260,6 +265,7 @@ export const useChatStore = create((set, get) => ({
     const socket = useAuthStore.getState().socket;
     if (!socket) return;
     unsubscribeFromSocket(socket);
+    socket.on("document:receive", receivePhoto);
     socket.on("photo:receive", receivePhoto);
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesDelivered", handleDelivered);
@@ -285,6 +291,7 @@ let markingSeen = false;
 const earlyStatus = new Map();
 
 function unsubscribeFromSocket(socket) {
+  socket.off("document:receive", receivePhoto);
   socket.off("photo:receive", receivePhoto);
   socket.off("newMessage", handleNewMessage);
   socket.off("messagesDelivered", handleDelivered);
@@ -402,6 +409,11 @@ async function decryptMessages(messages) {
       if (!authUser || !encryptionIdentity) return { ...message, text: "Encrypted message" };
       try {
         const text = await decryptText(message, authUser._id, encryptionIdentity);
+        if (message.documentId) {
+          const metadata = JSON.parse(text);
+          if (typeof metadata.name !== "string" || !Number.isSafeInteger(metadata.size) || typeof metadata.caption !== "string") throw new Error("Invalid document");
+          return { ...message, text: metadata.caption, file: { name: metadata.name, size: metadata.size } };
+        }
         if (!message.photoId) return { ...message, text };
         const image = await loadPhoto(message, authUser._id, encryptionIdentity).catch(() => null);
         return { ...message, image, text: image ? text : [text, "Photo unavailable on this device"].filter(Boolean).join("\n") };

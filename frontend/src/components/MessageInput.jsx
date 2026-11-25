@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { CameraIcon, ImageIcon, ReplyIcon, SendIcon, XIcon } from "lucide-react";
+import { PaperclipIcon, FileTextIcon, CameraIcon, ImageIcon, ReplyIcon, SendIcon, XIcon } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { prepareChatPhoto } from "../lib/image";
 
+import { readFileAsDataURL } from "../lib/image";
 import PhotoCamera from "./PhotoCamera";
 
 const MAX_LENGTH = 2000;
@@ -12,6 +13,8 @@ function MessageInput() {
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
 
+  const [file, setFile] = useState(null);
+  const documentInput = useRef(null);
   const photoId = useRef(null);
   const fileInputRef = useRef(null);
   const [cameraOpen, setCameraOpen] = useState(false);
@@ -32,14 +35,15 @@ function MessageInput() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [text]);
 
-  const canSend = Boolean(text.trim() || imagePreview);
+  const canSend = Boolean(text.trim() || imagePreview || file);
 
   const submit = async () => {
     if (!canSend || busy) return;
     setBusy(true);
     try {
-      if (await sendMessage({ text: text.trim(), image: imagePreview || undefined, photoId: photoId.current })) {
+      if (await sendMessage({ text: text.trim(), image: imagePreview || undefined, file, photoId: photoId.current })) {
         setText("");
+        setFile(null);
         setImagePreview(null);
         textareaRef.current?.focus();
       }
@@ -76,6 +80,7 @@ function MessageInput() {
     try {
       const prepared = await prepareChatPhoto(file);
       photoId.current = crypto.randomUUID();
+      setFile(null);
       setImagePreview(prepared);
     } catch (error) {
       toast.error(error.message || "Could not open that photo.");
@@ -83,6 +88,24 @@ function MessageInput() {
       setBusy(false);
     }
   };
+
+  async function selectDocument(event) {
+    const selected = event.target.files?.[0];
+    event.target.value = "";
+    if (!selected) return;
+    if (selected.size > 2 * 1024 * 1024) return toast.error("Choose a document of 2 MiB or smaller.");
+    setBusy(true);
+    try {
+      const url = await readFileAsDataURL(selected);
+      photoId.current = crypto.randomUUID();
+      setFile({ name: selected.name, size: selected.size, bytes: url.slice(url.indexOf(",") + 1) });
+      setImagePreview(null);
+    } catch {
+      toast.error("Could not read this document.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const removeImage = () => {
     setImagePreview(null);
@@ -92,7 +115,8 @@ function MessageInput() {
   return (
     <div className="shrink-0 border-t border-pl-line bg-pl-panel px-3 py-3 md:px-5">
       {cameraOpen && <PhotoCamera onClose={() => setCameraOpen(false)} onPhoto={(file) => { setCameraOpen(false); prepare(file); }} />}
-      {replyTo && <div className="mb-2 flex items-center gap-2 rounded-lg border-l-4 border-pl-accent bg-pl-selected px-3 py-2 text-sm"><ReplyIcon className="size-4 text-pl-accent" /><span className="min-w-0 flex-1 truncate text-pl-muted">Replying to: {replyTo.text || "Photo"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="text-pl-muted hover:text-pl-text"><XIcon className="size-4" /></button></div>}
+      {replyTo && <div className="mb-2 flex items-center gap-2 rounded-lg border-l-4 border-pl-accent bg-pl-selected px-3 py-2 text-sm"><ReplyIcon className="size-4 text-pl-accent" /><span className="min-w-0 flex-1 truncate text-pl-muted">Replying to: {replyTo.text || replyTo.file?.name || "Photo"}</span><button type="button" onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="text-pl-muted hover:text-pl-text"><XIcon className="size-4" /></button></div>}
+      {file && <div className="mb-2 flex items-center gap-2 rounded-xl bg-pl-chip p-2 text-sm"><FileTextIcon className="size-5 shrink-0 text-pl-blue" /><span className="min-w-0 flex-1 truncate">{file.name}</span><span className="text-xs text-pl-muted">{Math.ceil(file.size / 1024)} KiB</span><button type="button" disabled={busy} aria-label="Remove document" onClick={() => setFile(null)} className="p-2"><XIcon className="size-4" /></button></div>}
       {imagePreview && (
         <div className="mb-2 flex items-center">
           <div className="relative">
@@ -120,6 +144,8 @@ function MessageInput() {
           tabIndex={-1}
         />
 
+        <input type="file" ref={documentInput} onChange={selectDocument} hidden />
+        <button type="button" disabled={busy} onClick={() => documentInput.current.click()} aria-label="Attach a file" title="Attach a file (up to 2 MiB)" className="grid size-11 shrink-0 place-items-center rounded-full bg-pl-chip text-pl-blue hover:bg-pl-selected"><PaperclipIcon className="size-5" /></button>
         <input type="file" accept="image/*" capture="environment" ref={cameraRef} onChange={handleImageChange} hidden />
         <div className="relative" onKeyDown={(event) => { if (event.key === "Escape") setChoosingPhoto(false); }}
           onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setChoosingPhoto(false); }}>

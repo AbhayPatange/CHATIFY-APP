@@ -80,7 +80,7 @@ function ChatsList() {
                   <p className="flex min-w-0 items-center gap-1 text-sm text-pl-muted">
                     {mine && <MessageStatus status={last.status} className="text-pl-muted" size={16} />}
                     {last?.hasImage && <CameraIcon className="size-4 shrink-0" aria-hidden />}
-                    <span className="truncate">{last?.text || (last?.encrypted ? "Encrypted message" : last?.hasImage ? "Photo" : "")}</span>
+                    <span className="truncate">{last?.text || (last?.hasDocument ? "Document" : last?.encrypted ? "Encrypted message" : last?.hasImage ? "Photo" : "")}</span>
                   </p>
 
                   {count > 0 && (

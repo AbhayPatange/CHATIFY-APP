@@ -25,6 +25,12 @@ async function accessPhoto(owner, sender, id, value) {
 
 export const savePhoto = (owner, sender, id, encrypted) => accessPhoto(owner, sender, id, encrypted);
 
+export async function loadFileBytes(message, owner, identity) {
+  const encrypted = await accessPhoto(owner, message.senderId, message.documentId);
+  if (!encrypted) throw new Error("This document is unavailable on this device.");
+  return decryptText({ senderId: message.senderId, encrypted }, owner, identity);
+}
+
 export async function loadPhoto(message, owner, identity) {
   const encrypted = await accessPhoto(owner, message.senderId, message.photoId);
   if (!encrypted) return null;

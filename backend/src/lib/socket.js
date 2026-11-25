@@ -99,11 +99,11 @@ export const emitToUser = (userId, event, payload) => {
 };
 
 // Complete once at least one of the recipient's devices has committed the encrypted photo.
-export async function deliverPhoto(receiverId, photo) {
+export async function deliverAttachment(receiverId, attachment, event) {
   const devices = await io.in(String(receiverId)).fetchSockets();
   try {
     await Promise.any(devices.map(async (socket) => {
-      const saved = await socket.timeout(10000).emitWithAck("photo:receive", photo);
+      const saved = await socket.timeout(10000).emitWithAck(event, attachment);
       if (saved !== true) throw new Error("Photo was not saved");
     }));
     return true;

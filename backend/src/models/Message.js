@@ -21,6 +21,7 @@ const messageSchema = new mongoose.Schema(
       version: { type: Number },
     },
     image: { type: String },
+    documentId: { type: String },
     photoId: { type: String },
     replyTo: {
       messageId: { type: String, maxlength: 24 },

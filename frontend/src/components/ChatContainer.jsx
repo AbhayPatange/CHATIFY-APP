@@ -5,6 +5,7 @@ import { useChatStore } from "../store/useChatStore";
 import { formatDayLabel, formatTime, isSameDay } from "../lib/time";
 import ChatHeader from "./ChatHeader";
 import NoChatHistoryPlaceholder from "./NoChatHistoryPlaceholder";
+import DocumentAttachment from "./DocumentAttachment";
 import MessageInput from "./MessageInput";
 import MessagesLoadingSkeleton from "./MessagesLoadingSkeleton";
 import MessageStatus from "./MessageStatus";
@@ -144,6 +145,7 @@ function ChatContainer() {
                       }`}
                     >
                       {msg.replyTo && <div className="mb-1.5 truncate rounded border-l-2 border-pl-accent bg-black/10 px-2 py-1 text-xs text-pl-muted">↩ {messages.find((m) => m._id === msg.replyTo.messageId)?.text || "Reply to a message"}</div>}
+                      {msg.file && <DocumentAttachment message={msg} />}
                       {msg.image && (
                         <img
                           src={msg.image}
