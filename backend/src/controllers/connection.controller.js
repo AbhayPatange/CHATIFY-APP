@@ -4,7 +4,7 @@ import User from "../models/User.js";
 import { emitToUser } from "../lib/socket.js";
 import { isObjectId } from "../lib/validators.js";
 
-const userFields = "fullName profilePic encryptionPublicKey connectionCode";
+const userFields = "fullName profilePic bio encryptionPublicKey";
 const isBlocked = async (me, otherId) =>
   me.blockedUsers?.some((id) => String(id) === String(otherId)) ||
   Boolean(await User.exists({ _id: otherId, blockedUsers: me._id }));
@@ -34,6 +34,7 @@ const publicUser = (user) => ({
   _id: user._id,
   fullName: user.fullName,
   profilePic: user.profilePic,
+  bio: user.bio || "",
   encryptionPublicKey: user.encryptionPublicKey || "",
 });
 

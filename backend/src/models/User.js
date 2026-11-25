@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    bio: { type: String, trim: true, maxlength: 160, default: "" },
     // Shared deliberately with someone outside the app; it is never listed or searchable.
     connectionCode: { type: String, unique: true, sparse: true, select: false },
     shortConnectionCode: { type: String, unique: true, sparse: true, select: false },

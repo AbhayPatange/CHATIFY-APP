@@ -47,6 +47,7 @@ router.get("/check", protectRoute, (req, res) =>
     fullName: req.user.fullName,
     email: req.user.email,
     profilePic: req.user.profilePic,
+    bio: req.user.bio || "",
     encryptionPublicKey: req.user.encryptionPublicKey || "",
     encryptionKeyBundle: req.user.encryptionKeyBundle || null,
   })

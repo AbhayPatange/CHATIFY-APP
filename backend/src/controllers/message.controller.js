@@ -26,7 +26,7 @@ export const getAllContacts = async (req, res, next) => {
     // Only accepted connections appear here. There is intentionally no directory of users.
     const partnerIds = await connectedPartnerIds(req.user._id);
     const users = await User.find({ _id: { $in: partnerIds, $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: req.user._id } })
-      .select("fullName profilePic encryptionPublicKey")
+      .select("fullName profilePic bio encryptionPublicKey")
       .sort({ fullName: 1 })
       .limit(500)
       .lean();
@@ -200,7 +200,7 @@ export const getChatPartners = async (req, res, next) => {
     ]);
 
     const users = await User.find({ _id: { $in: partners.map((p) => p._id).filter((id) => connectedIds.some((connectedId) => String(connectedId) === String(id))), $nin: req.user.blockedUsers || [] }, blockedUsers: { $ne: me } })
-      .select("fullName profilePic encryptionPublicKey")
+      .select("fullName profilePic bio encryptionPublicKey")
       .lean();
     const byId = new Map(users.map((u) => [u._id.toString(), u]));
 

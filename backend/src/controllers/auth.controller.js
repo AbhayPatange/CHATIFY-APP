@@ -16,6 +16,7 @@ const publicUser = (user, { includeKeyBundle = false } = {}) => ({
   fullName: user.fullName,
   email: user.email,
   profilePic: user.profilePic,
+  bio: user.bio || "",
   encryptionPublicKey: user.encryptionPublicKey || "",
   ...(includeKeyBundle ? { encryptionKeyBundle: user.encryptionKeyBundle || null } : {}),
 });
@@ -150,31 +151,31 @@ export const logout = (_req, res) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    if (!ENV.CLOUDINARY_CONFIGURED) {
-      return res.status(503).json({ message: "Image uploads are not configured on this server." });
-    }
-
-    const { profilePic } = req.body ?? {};
-    if (!profilePic) return res.status(400).json({ message: "Profile pic is required" });
-
-    const check = validateImageDataUrl(profilePic);
-    if (!check.ok) return res.status(400).json({ message: check.message });
-
-    let uploadResponse;
-    try {
-      uploadResponse = await cloudinary.uploader.upload(profilePic, {
+    const { profilePic, bio } = req.body ?? {};
+    if (bio === undefined && profilePic === undefined) return res.status(400).json({ message: "Provide a bio or profile picture." });
+    if (bio !== undefined && (!isString(bio) || bio.trim().length > 160)) return res.status(400).json({ message: "Bio must be 160 characters or fewer." });
+    const changes = {};
+    if (bio !== undefined) changes.bio = bio.trim();
+    if (profilePic !== undefined) {
+      if (!ENV.CLOUDINARY_CONFIGURED) return res.status(503).json({ message: "Image uploads are not configured on this server." });
+      const check = validateImageDataUrl(profilePic);
+      if (!check.ok) return res.status(400).json({ message: check.message });
+      try {
+        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
         folder: "pinglet/avatars",
         resource_type: "image",
         transformation: [{ width: 400, height: 400, crop: "fill" }],
-      });
-    } catch (error) {
-      console.error("Cloudinary upload failed:", error.message);
-      return res.status(502).json({ message: "Image upload failed. Please try again." });
+        });
+        changes.profilePic = uploadResponse.secure_url;
+      } catch (error) {
+        console.error("Cloudinary upload failed:", error.message);
+        return res.status(502).json({ message: "Image upload failed. Please try again." });
+      }
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { profilePic: uploadResponse.secure_url },
+      changes,
       { new: true }
     );
 

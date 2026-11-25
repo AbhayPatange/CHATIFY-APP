@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { PaperclipIcon, ReplyIcon, SendIcon, XIcon } from "lucide-react";
-import useKeyboardSound from "../hooks/useKeyboardSound";
 import { useChatStore } from "../store/useChatStore";
 import { readFileAsDataURL, validateImageFile } from "../lib/image";
 
 const MAX_LENGTH = 2000;
 
 function MessageInput() {
-  const { playRandomKeyStrokeSound } = useKeyboardSound();
   const [text, setText] = useState("");
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -18,7 +16,6 @@ function MessageInput() {
   const sendMessage = useChatStore((s) => s.sendMessage);
   const replyTo = useChatStore((s) => s.replyTo);
   const setReplyTo = useChatStore((s) => s.setReplyTo);
-  const isSoundEnabled = useChatStore((s) => s.isSoundEnabled);
 
   // grow with the text (up to ~5 lines), like a phone chat box
   useEffect(() => {
@@ -32,7 +29,6 @@ function MessageInput() {
 
   const submit = () => {
     if (!canSend) return;
-    if (isSoundEnabled) playRandomKeyStrokeSound();
 
     sendMessage({ text: text.trim(), image: imagePreview || undefined });
     setText("");
@@ -128,7 +124,6 @@ function MessageInput() {
           onKeyDown={handleKeyDown}
           onChange={(e) => {
             setText(e.target.value);
-            if (isSoundEnabled) playRandomKeyStrokeSound();
           }}
           className="max-h-[120px] min-w-0 flex-1 resize-none rounded-3xl bg-pl-selected px-4 py-[11px] text-[15px] leading-[1.35] text-pl-text placeholder-pl-muted focus:outline-none"
           placeholder="Type a message"
